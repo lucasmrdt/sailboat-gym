@@ -1,0 +1,5 @@
+*.mp4
+*.pkl
+__pycache__
+.DS_Store
+output
