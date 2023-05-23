@@ -62,7 +62,7 @@ class RendererObservation(metaclass=ProfilingMeta):
 
 
 class CV2DRenderer(IRenderer):
-    def __init__(self, size=500, padding=30, vector_scale=10, **kwargs):
+    def __init__(self, size=512, padding=30, vector_scale=10, style={}):
         self.size = size
         self.padding = padding
         self.vector_scale = vector_scale
@@ -71,7 +71,7 @@ class CV2DRenderer(IRenderer):
         self.map_bounds = None
         self.center = None
 
-        self.opts = {
+        self.style = {
             "background": WHITE,
             "border": {
                 "color": rgba(BLACK, .2),
@@ -118,10 +118,10 @@ class CV2DRenderer(IRenderer):
                 "width": 2,
             },
         }
-        self.opts = deep_update(self.opts, kwargs)
+        self.style = deep_update(self.style, style)
 
     def __create_empty_img(self):
-        bg = np.array(self.opts["background"])
+        bg = np.array(self.style["background"])
         img = bg[None, None, :] + np.zeros((self.size, self.size, 3))
         return img.astype(np.uint8)
 
@@ -148,8 +148,8 @@ class CV2DRenderer(IRenderer):
         cv2.rectangle(img,
                       tuple(borders[0]),
                       tuple(borders[1]),
-                      self.opts["border"]["color"],
-                      self.opts["border"]["width"],
+                      self.style["border"]["color"],
+                      self.style["border"]["width"],
                       lineType=cv2.LINE_AA)
 
     def __draw_wind(self, img: np.ndarray, obs: RendererObservation):
@@ -157,15 +157,15 @@ class CV2DRenderer(IRenderer):
         cv2.arrowedLine(img,
                         tuple(img_center.astype(int)),
                         tuple((img_center + obs.wind).astype(int)),
-                        self.opts["wind"]["color"],
-                        self.opts["wind"]["width"],
+                        self.style["wind"]["color"],
+                        self.style["wind"]["width"],
                         tipLength=0.2,
                         line_type=cv2.LINE_AA)
 
     def __draw_boat(self, img: np.ndarray, obs: RendererObservation):
-        boat_size = self.opts["boat"]["size"]
-        phi = self.opts["boat"]["phi"]
-        spike_coeff = self.opts["boat"]["spike_coef"]
+        boat_size = self.style["boat"]["size"]
+        phi = self.style["boat"]["phi"]
+        spike_coeff = self.style["boat"]["spike_coef"]
         sailboat_pts = np.array([
             [obs.p_boat + angle_to_vec(obs.theta_boat + phi) * boat_size],
             [obs.p_boat + angle_to_vec(obs.theta_boat +
@@ -178,24 +178,24 @@ class CV2DRenderer(IRenderer):
         ], dtype=int)
         cv2.fillConvexPoly(img,
                            sailboat_pts,
-                           self.opts["boat"]["color"],
+                           self.style["boat"]["color"],
                            lineType=cv2.LINE_AA)
 
     def __draw_sail(self, img: np.ndarray, obs: RendererObservation):
-        sail_height = self.opts["sail"]["height"]
+        sail_height = self.style["sail"]["height"]
         sail_start = obs.p_boat
         sail_end = sail_start + angle_to_vec(obs.theta_sail) * sail_height
         cv2.line(img,
                  tuple(sail_start.astype(int)),
                  tuple(sail_end.astype(int)),
-                 self.opts["sail"]["color"],
-                 self.opts["sail"]["width"],
+                 self.style["sail"]["color"],
+                 self.style["sail"]["width"],
                  lineType=cv2.LINE_AA)
 
     def __draw_rudder(self, img: np.ndarray, obs: RendererObservation):
-        rudder_height = self.opts["rudder"]["height"]
-        boat_phi = self.opts["boat"]["phi"]
-        boat_size = self.opts["boat"]["size"]
+        rudder_height = self.style["rudder"]["height"]
+        boat_phi = self.style["boat"]["phi"]
+        boat_size = self.style["boat"]["size"]
         back_of_boat = obs.p_boat + \
             angle_to_vec(np.pi + obs.theta_boat) * \
             np.cos(boat_phi) * boat_size
@@ -205,8 +205,8 @@ class CV2DRenderer(IRenderer):
         cv2.line(img,
                  tuple(rudder_start.astype(int)),
                  tuple(rudder_end.astype(int)),
-                 self.opts["rudder"]["color"],
-                 self.opts["rudder"]["width"],
+                 self.style["rudder"]["color"],
+                 self.style["rudder"]["width"],
                  lineType=cv2.LINE_AA)
 
     def __draw_boat_pos_velocity(self, img: np.ndarray, obs: RendererObservation):
@@ -216,14 +216,14 @@ class CV2DRenderer(IRenderer):
         cv2.arrowedLine(img,
                         tuple(dt_p_boat_start.astype(int)),
                         tuple(dt_p_boat_end.astype(int)),
-                        self.opts["boat"]["dt_p"]["color"],
-                        self.opts["boat"]["dt_p"]["width"],
+                        self.style["boat"]["dt_p"]["color"],
+                        self.style["boat"]["dt_p"]["width"],
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
     def __draw_boat_heading_velocity(self, img: np.ndarray, obs: RendererObservation):
-        spike_coeff = self.opts["boat"]["spike_coef"]
-        boat_size = self.opts["boat"]["size"]
+        spike_coeff = self.style["boat"]["spike_coef"]
+        boat_size = self.style["boat"]["size"]
         front_of_boat = obs.p_boat + \
             angle_to_vec(obs.theta_boat) * spike_coeff * boat_size
         obs.dt_p_boat
@@ -232,15 +232,15 @@ class CV2DRenderer(IRenderer):
         cv2.arrowedLine(img,
                         tuple(dt_theta_boat_start.astype(int)),
                         tuple(dt_theta_boat_end.astype(int)),
-                        self.opts["boat"]["dt_theta"]["color"],
-                        self.opts["boat"]["dt_theta"]["width"],
+                        self.style["boat"]["dt_theta"]["color"],
+                        self.style["boat"]["dt_theta"]["width"],
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
     def __draw_rudder_velocity(self, img: np.ndarray, obs: RendererObservation):
-        boat_phi = self.opts["boat"]["phi"]
-        boat_size = self.opts["boat"]["size"]
-        rudder_height = self.opts["rudder"]["height"]
+        boat_phi = self.style["boat"]["phi"]
+        boat_size = self.style["boat"]["size"]
+        rudder_height = self.style["rudder"]["height"]
         back_of_boat = obs.p_boat + \
             angle_to_vec(np.pi + obs.theta_boat) * \
             np.cos(boat_phi) * boat_size
@@ -250,29 +250,29 @@ class CV2DRenderer(IRenderer):
         cv2.arrowedLine(img,
                         tuple(dt_rudder_start.astype(int)),
                         tuple(dt_rudder_end.astype(int)),
-                        self.opts["rudder"]["dt_theta"]["color"],
-                        self.opts["rudder"]["dt_theta"]["width"],
+                        self.style["rudder"]["dt_theta"]["color"],
+                        self.style["rudder"]["dt_theta"]["width"],
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
     def __draw_sail_velocity(self, img: np.ndarray, obs: RendererObservation):
-        sail_height = self.opts["sail"]["height"]
+        sail_height = self.style["sail"]["height"]
         dt_sail_start = obs.p_boat + \
             angle_to_vec(obs.theta_sail) * sail_height
         dt_sail_end = dt_sail_start + obs.dt_sail
         cv2.arrowedLine(img,
                         tuple(dt_sail_start.astype(int)),
                         tuple(dt_sail_end.astype(int)),
-                        self.opts["sail"]["dt_theta"]["color"],
-                        self.opts["sail"]["dt_theta"]["width"],
+                        self.style["sail"]["dt_theta"]["color"],
+                        self.style["sail"]["dt_theta"]["width"],
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
     def __draw_boat_center(self, img: np.ndarray, obs: RendererObservation):
         cv2.circle(img,
                    tuple(obs.p_boat.astype(int)),
-                   self.opts["boat"]["center"]["radius"],
-                   self.opts["boat"]["center"]["color"],
+                   self.style["boat"]["center"]["radius"],
+                   self.style["boat"]["center"]["color"],
                    -1)
 
     def get_render_mode(self) -> str:

@@ -13,12 +13,12 @@ def is_debugging():
 
 @functools.lru_cache(maxsize=1)
 def is_profiling():
-    return os.getenv('PROFILE') is not None
+    return os.getenv('PROFILING') is not None
 
 
 @functools.lru_cache(maxsize=1)
 def is_profiling_all():
-    return os.getenv('PROFILE') == 'all'
+    return os.getenv('PROFILING') == 'all'
 
 
 class DurationProgress:

@@ -9,33 +9,10 @@ from ..env import SailboatEnv
 from .lsa_sim import LSASim
 
 
-class Vector3(TypedDict):
-    x: float
-    y: float
-    z: float
-
-
-class Vector2(TypedDict):
-    x: float
-    y: float
-
-
-class SimObservation(TypedDict):
-    p_boat: Vector3
-    dt_p_boat: Vector3
-    theta_boat: Vector3
-    dt_theta_boat: Vector3
-    theta_rudder: float
-    dt_theta_rudder: float
-    theta_sail: float
-    dt_theta_sail: float
-    wind: Vector2
-
-
 class SailboatLSAEnv(SailboatEnv):
     SIM_RATE = 10  # Hz
 
-    def __init__(self, reward_fn: Callable[[Observation, Action], float] = lambda *_: 0, renderer: IRenderer = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, docker_tag: str = 'default'):
+    def __init__(self, reward_fn: Callable[[Observation, Action], float] = lambda *_: 0, renderer: IRenderer = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1'):
         """Sailboat LSA environment
 
         Args:
@@ -44,7 +21,7 @@ class SailboatLSAEnv(SailboatEnv):
             wind_generator_fn (Callable[[int], np.ndarray], optional): Function that returns a 2D vector representing the global wind during the simulation. Defaults to None.
             video_speed (float, optional): Speed of the video recording. Defaults to 1.
             keep_sim_alive (bool, optional): Keep the simulation running even after the program exits. Defaults to False.
-            docker_tag (str, optional): Docker tag to be used for the simulation, see the documentation for more information. Defaults to 'default'.
+            container_tag (str, optional): Docker tag to be used for the simulation, see the documentation for more information. Defaults to 'default'.
         """
         super().__init__()
 
@@ -55,7 +32,7 @@ class SailboatLSAEnv(SailboatEnv):
             'render_fps': video_speed * self.SIM_RATE,
         }
 
-        self.sim = LSASim(docker_tag)
+        self.sim = LSASim(container_tag)
         self.reward_fn = reward_fn
         self.renderer = renderer
         self.obs = None
@@ -64,19 +41,6 @@ class SailboatLSAEnv(SailboatEnv):
         # Stop the simulation when the program exits
         if not keep_sim_alive:
             atexit.register(self.sim.stop)
-
-    def __parse_sim_obs(self, obs: SimObservation) -> Observation:
-        return {
-            'p_boat': np.array([obs['p_boat']['x'], obs['p_boat']['y'], obs['p_boat']['z']], dtype=np.float32),
-            'dt_p_boat': np.array([obs['dt_p_boat']['x'], obs['dt_p_boat']['y'], obs['dt_p_boat']['z']], dtype=np.float32),
-            'theta_boat': np.array([obs['theta_boat']['x'], obs['theta_boat']['y'], obs['theta_boat']['z']], dtype=np.float32),
-            'dt_theta_boat': np.array([obs['dt_theta_boat']['x'], obs['dt_theta_boat']['y'], obs['dt_theta_boat']['z']], dtype=np.float32),
-            'theta_rudder': np.array([obs['theta_rudder']], dtype=np.float32),
-            'dt_theta_rudder': np.array([obs['dt_theta_rudder']], dtype=np.float32),
-            'theta_sail': np.array([obs['theta_sail']], dtype=np.float32),
-            'dt_theta_sail': np.array([obs['dt_theta_sail']], dtype=np.float32),
-            'wind': np.array([obs['wind']['x'], obs['wind']['y']], dtype=np.float32),
-        }
 
     def reset(self, seed=None, **kwargs):
         super().reset(seed=seed, **kwargs)
@@ -88,8 +52,7 @@ class SailboatLSAEnv(SailboatEnv):
         else:
             wind = np.random.normal(0, 2, 2)
 
-        obs, info = self.sim.reset(wind, self.SIM_RATE)
-        self.obs = self.__parse_sim_obs(obs)
+        self.obs, info = self.sim.reset(wind, self.SIM_RATE)
 
         # setup the renderer, its needed to know the min/max position of the boat
         if self.renderer:
@@ -110,8 +73,7 @@ class SailboatLSAEnv(SailboatEnv):
         return self.obs, info
 
     def step(self, action: Action):
-        obs, terminated, info = self.sim.step(action)
-        self.obs = self.__parse_sim_obs(obs)
+        self.obs, terminated, info = self.sim.step(action)
         reward = self.reward_fn(self.obs, action)
 
         if is_debugging():

@@ -28,8 +28,8 @@ class Observation(TypedDict):
 
 
 class Action(TypedDict):
-    theta_rudder: float
-    theta_sail: float
+    theta_rudder: np.ndarray[1]
+    theta_sail: np.ndarray[1]
 
 
 GymObservation = spaces.Dict({
