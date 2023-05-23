@@ -1,18 +1,6 @@
 from gymnasium import spaces
-from dataclasses import dataclass
 from typing import TypedDict
 import numpy as np
-
-
-class Vector3(TypedDict):
-    x: float
-    y: float
-    z: float
-
-
-class Vector2(TypedDict):
-    x: float
-    y: float
 
 
 class Observation(TypedDict):
