@@ -3,8 +3,6 @@ import zmq
 import msgpack
 import time
 import numpy as np
-import os
-import subprocess
 from typing import TypedDict
 
 from ...utils import ProfilingMeta, is_debugging, DurationProgress
@@ -41,7 +39,6 @@ class LSASim(metaclass=ProfilingMeta):
         if is_debugging():
             print('[LSASim] Launching docker container')
         try:
-            self.__prepare_docker()
             self.container = self.__launch_or_get_container(container_tag)
             self.__wait_until_ready()
             self.socket = self.__create_connection()
@@ -95,14 +92,6 @@ class LSASim(metaclass=ProfilingMeta):
             'wind': np.array([obs['wind']['x'], obs['wind']['y']], dtype=np.float32),
         }
 
-    def __prepare_docker(self):
-        if not os.environ.get('DOCKER_HOST'):
-            cmd = "docker context ls | grep $(docker context show) | awk '{print $4}'"
-            host = subprocess.check_output(cmd, shell=True).decode().strip()
-            os.environ['DOCKER_HOST'] = host
-            if is_debugging():
-                print(f'[LSASim] Set DOCKER_HOST to {host}')
-
     def __launch_or_get_container(self, container_tag):
         with DurationProgress(total=7, desc='Launching docker container'):
             try:
@@ -111,7 +100,7 @@ class LSASim(metaclass=ProfilingMeta):
                 if is_debugging():
                     raise e
                 raise Exception(
-                    'Docker is not running. Please start docker and try again.')
+                    'Docker socket is not detected. Please start docker and try again or make sure that you have correctly installed docker (MacOS: refer to this instruction https://stackoverflow.com/a/76125150).')
 
             name = f'sailboat-sim-lsa-gym-{container_tag}'
 
