@@ -1,34 +1,82 @@
-from setuptools import setup, find_packages
+"""Setups the project."""
+
+import pathlib
+
+from setuptools import setup
+
+
+CWD = pathlib.Path(__file__).absolute().parent
+
+
+def get_version():
+    """Gets the sailboat-gym version."""
+    path = CWD / "sailboat_gym" / "__init__.py"
+    content = path.read_text()
+
+    for line in content.splitlines():
+        if line.startswith("__version__"):
+            return line.strip().split()[-1].strip().strip('"').strip("'")
+    raise RuntimeError("bad version data in __init__.py")
+
+
+def get_description():
+    """Gets the description from the readme."""
+    with open("README.md") as fh:
+        long_description = ""
+        header_count = 0
+        for line in fh:
+            if line.startswith("##"):
+                header_count += 1
+            if header_count < 1:
+                if not line.startswith("#") and not line.startswith("!"):
+                    long_description += line
+            else:
+                break
+    return long_description
+
 
 setup(
-    name='sailboat-gym',
-    version='1.0.1',
-    author='Lucas Marandat',
-    author_email='lucas.mrdt+sailboat@gmail.com',
-    description='Dynamic simulation environment for sailboats. With Sailboat Gym, you can explore and experiment with different control algorithms and strategies in a realistic virtual sailing environment.',
-    long_description=open('README.md').read(),
-    long_description_content_type='text/markdown',
-    url='https://github.com/lucasmrdt/sailboat-gym',
-    packages=find_packages(),
-    install_requires=[
-        'gymnasium==0.28.1',
-        'msgpack_python==0.5.6',
-        'numpy==1.24.3',
-        'pydantic==1.10.7',
-        'pyzmq==25.0.2',
-        'tqdm==4.65.0',
-        'opencv-python==4.7.0.72',
-        'imageio-ffmpeg==0.4.8',
-        'docker==6.1.2',
-        'moviepy==1.0.3'
-    ],
+    name="sailboat-gym",
+    version=get_version(),
+    description="A dynamic gym simulation environment specifically designed for sailboats.",
+    long_description=get_description(),
+    author="Lucas Marandat",
+    author_email="lucas.mrdt+sailboat@gmail.com",
+    license="MIT License",
+    keywords=["Simulation", "Sailboat", "Gymnasium", "Gym"],
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
+    python_requires=">=3.7",
+    url="https://github.com/lucasmrdt/sailboat-gym",
+    project_urls={
+        "Homepage": "https://github.com/lucasmrdt/sailboat-gym",
+        "Repository": "https://github.com/lucasmrdt/sailboat-gym",
+        "Documentation": "https://github.com/lucasmrdt/sailboat-gym/blob/main/DOCUMENTATION.md",
+        "Bug Report": "https://github.com/lucasmrdt/sailboat-gym/issues",
+    },
+    packages=["sailboat_gym"],
+    include_package_data=True,
+    install_requires=[
+        # list your dependencies here
+    ],
+    extras_require={
+        "cv2d-renderer": ["opencv-python >=4.7.0.72", "imageio-ffmpeg >=0.4.8"],
+        "docker": ["docker >=6.1.2"],
+        "moviepy": ["moviepy >=1.0.3"],
+    },
+    package_data={
+        "sailboat_gym": [
+            "docs/demo.gif",
+            "docs/sailing_schema.png",
+        ]
+    },
 )
