@@ -157,7 +157,6 @@ class LSASim(metaclass=ProfilingMeta):
 
             if is_debugging():
                 print('[LSASim] Launched new docker container')
-                print(container.logs().decode('utf-8'))
 
         return container
 

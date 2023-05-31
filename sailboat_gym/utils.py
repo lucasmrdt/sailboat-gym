@@ -44,7 +44,7 @@ class DurationProgress:
     def __update_progress(self):
         while not self.has_finished:
             self.pbar.update()
-            time.sleep(.1)
+            time.sleep(1)
 
 
 def profiling(func, prefix=''):
