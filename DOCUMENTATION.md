@@ -34,7 +34,7 @@ The Sailboat Gym package includes a 2D renderer called `CV2DRenderer` that allow
 - `vector_scale`: The scale factor for rendering vectors.
 - `style`: A dictionary of keyword arguments that can be used to modify the default rendering options. You can override specific rendering settings such as colors, widths, and sizes for different components of the rendered image using this parameter.
 
-You can find additional information about the default rendering options in the [default rendering options](sail_gym/renderers/cv_2d_renderer.py) file.
+You can find additional information about the default rendering options in the [default rendering options](sailboat_gym/renderers/cv_2d_renderer.py) file.
 
 ## Container tags (`container_tag`)
 

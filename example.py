@@ -3,7 +3,7 @@ import tqdm
 from itertools import count
 import gymnasium as gym
 from gymnasium.wrappers.record_video import RecordVideo
-from sail_gym import CV2DRenderer
+from sailboat_gym import CV2DRenderer
 
 
 def ctrl(_):

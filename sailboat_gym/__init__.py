@@ -7,6 +7,6 @@ from .utils import *
 
 register(
     id='SailboatLSAEnv-v0',
-    entry_point='sail_gym.envs:SailboatLSAEnv',
+    entry_point='sailboat_gym.envs:SailboatLSAEnv',
     max_episode_steps=60 * SailboatLSAEnv.SIM_RATE,  # 1 minute
 )

@@ -51,9 +51,9 @@ Alternatively, you can use the following code snippet in your Python script:
 ```python
 import gymnasium as gym
 from gymnasium.wrappers.record_video import RecordVideo
-import sail_gym
+import sailboat_gym
 
-env = gym.make('SailboatLSAEnv-v0', renderer=sail_gym.CV2DRenderer())
+env = gym.make('SailboatLSAEnv-v0', renderer=sailboat_gym.CV2DRenderer())
 env = RecordVideo(env, video_folder='./output/videos/')
 
 env.reset(seed=10)

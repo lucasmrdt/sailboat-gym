@@ -1,5 +1,48 @@
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Distribution / packaging
+/dist/
+/build/
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+/.venv/
+/venv/
+/ENV/
+env/
+
+# Dependencies
+/.venv/
+/.env
+/.idea/
+/.vscode/
+/.ropeproject/
+
+# Development and testing
+/.pytest_cache/
+/.coverage
+/.cache/
+/nose2-results/
+/*.sqlite
+/.mypy_cache/
+/pytestdebug.log
+
+# Editor and IDE files
+*~
+.*.swp
+.DS_Store
+.idea/
+.vscode/
+
+# Other
+/.tox/
+/.env
+/coverage.xml
+/.coverage
 *.mp4
 *.pkl
-__pycache__
-.DS_Store
 output
