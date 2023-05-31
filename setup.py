@@ -2,7 +2,7 @@
 
 import pathlib
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 CWD = pathlib.Path(__file__).absolute().parent
@@ -63,7 +63,7 @@ setup(
         "Documentation": "https://github.com/lucasmrdt/sailboat-gym/blob/main/DOCUMENTATION.md",
         "Bug Report": "https://github.com/lucasmrdt/sailboat-gym/issues",
     },
-    packages=["sailboat_gym"],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=[
         # list your dependencies here
