@@ -19,14 +19,16 @@ RUN source /opt/ros/kinetic/setup.bash \
     && cd ~/catkin_ws/ \
     && catkin_make
 
-ARG max_step_size=0.001
-ARG real_time_update_rate=0
+# https://stackoverflow.com/a/46171246
+RUN git config --global http.postBuffer 1048576000
+RUN git config --global https.postBuffer 1048576000
+RUN git config --global http.sslVerify false
+RUN git config --global http.postBuffer 1048576000
 
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/lucasmrdt/usv_sim_lsa \
     && cd usv_sim_lsa \
-    && sed -i "s/MAX_STEP_SIZE/${max_step_size}/g" usv_sim/world/empty.world \
-    && sed -i "s/REAL_TIME_UPDATE_RATE/${real_time_update_rate}/g" usv_sim/world/empty.world \
+    && git checkout 0e5865dd \
     && git submodule init \
     && git submodule update
 
@@ -53,20 +55,29 @@ RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py \
     && rm get-pip.py \
     && python -m pip install pyzmq msgpack
 
-# RUN mkdir /root/.ssh
+RUN mkdir /root/.ssh
 
-# COPY id_rsa.pub /root/.ssh/authorized_keys
+COPY id_rsa.pub /root/.ssh/authorized_keys
 
-# RUN chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys
 
-# RUN apt-get install openssh-server -y
+RUN apt-get install openssh-server -y
+
+ARG max_step_size=0.001
+ARG real_time_update_rate=0
+
+RUN cd ~/catkin_ws/install_isolated/share/usv_sim \
+    && sed -i "s/MAX_STEP_SIZE/${max_step_size}/g" world/empty.world \
+    && sed -i "s/REAL_TIME_UPDATE_RATE/${real_time_update_rate}/g" world/empty.world \
+    && cp config/sailboat.${max_step_size}.yaml config/sailboat.yaml
 
 WORKDIR /root/catkin_ws/
 
 RUN echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc \
-    # && echo "service ssh start" >> ~/.bashrc \
+    && echo "service ssh start" >> ~/.bashrc \
     && echo "source ~/catkin_ws/install_isolated/setup.bash" >> ~/.bashrc
 
 CMD source /opt/ros/kinetic/setup.bash \
     && source ~/catkin_ws/install_isolated/setup.bash \
+    && service ssh start \
     && roslaunch usv_sim sailboat_scenario3.launch parse:=false

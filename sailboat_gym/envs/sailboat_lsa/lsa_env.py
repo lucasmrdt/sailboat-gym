@@ -1,8 +1,8 @@
 import numpy as np
 import atexit
-from typing import Callable, TypedDict
+from typing import Callable
 
-from ...interfaces import IRenderer
+from ...abstracts import AbcRender
 from ...types import Observation, Action
 from ...utils import is_debugging
 from ..env import SailboatEnv
@@ -12,16 +12,17 @@ from .lsa_sim import LSASim
 class SailboatLSAEnv(SailboatEnv):
     SIM_RATE = 10  # Hz
 
-    def __init__(self, reward_fn: Callable[[Observation, Action], float] = lambda *_: 0, renderer: IRenderer = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1'):
+    def __init__(self, reward_fn: Callable[[Observation, Action], float] = lambda *_: 0, renderer: AbcRender = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1', name='default'):
         """Sailboat LSA environment
 
         Args:
             reward_fn (Callable[[Observation, Action], float], optional): Use a custom reward function depending of your task. Defaults to lambda *_: 0.
-            renderer (IRenderer, optional): Renderer instance to be used for rendering the environment, look at sailboat_gym/renderers folder for more information. Defaults to None.
+            renderer (AbcRender, optional): Renderer instance to be used for rendering the environment, look at sailboat_gym/renderers folder for more information. Defaults to None.
             wind_generator_fn (Callable[[int], np.ndarray], optional): Function that returns a 2D vector representing the global wind during the simulation. Defaults to None.
             video_speed (float, optional): Speed of the video recording. Defaults to 1.
             keep_sim_alive (bool, optional): Keep the simulation running even after the program exits. Defaults to False.
-            container_tag (str, optional): Docker tag to be used for the simulation, see the documentation for more information. Defaults to 'default'.
+            container_tag (str, optional): Docker tag to be used for the simulation, see the documentation for more information. Defaults to 'mss1'.
+            name ([type], optional): Name of the simulation, required to run multiples environment on same machine.. Defaults to 'default'.
         """
         super().__init__()
 
@@ -32,7 +33,7 @@ class SailboatLSAEnv(SailboatEnv):
             'render_fps': video_speed * self.SIM_RATE,
         }
 
-        self.sim = LSASim(container_tag)
+        self.sim = LSASim(container_tag, name)
         self.reward_fn = reward_fn
         self.renderer = renderer
         self.obs = None
@@ -56,12 +57,7 @@ class SailboatLSAEnv(SailboatEnv):
 
         # setup the renderer, its needed to know the min/max position of the boat
         if self.renderer:
-            assert 'min_position' in info and 'max_position' in info, 'Missing min/max position in info'
-            min_position = np.array(
-                [info['min_position']['x'], info['min_position']['y'], info['min_position']['z']], dtype=np.float32)
-            max_position = np.array(
-                [info['max_position']['x'], info['max_position']['y'], info['max_position']['z']], dtype=np.float32)
-            self.renderer.setup(min_position, max_position)
+            self.renderer.setup(info['map_bounds'])
 
         if is_debugging():
             print('\nResetting environment:')

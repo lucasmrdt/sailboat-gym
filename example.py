@@ -7,21 +7,24 @@ from sailboat_gym import CV2DRenderer
 
 
 def ctrl(_):
-    rudder_angle = np.deg2rad(-5)
-    sail_angle = np.deg2rad(-45)
+    rudder_angle = np.deg2rad(-20)
+    sail_angle = np.deg2rad(+20)
     return {'theta_rudder': np.array(rudder_angle), 'theta_sail': np.array(sail_angle)}
 
 
 def generate_wind(seed):
-    np.random.seed(seed)
-    return np.random.normal(0, 2, 2)
+    return [-2, 0]
 
 
+# mss4 -> x8-x9
+# mss5 -> x9-x10
+# mss6 -> x8-x10
+# mss8 -> x6-x10
 env = gym.make('SailboatLSAEnv-v0',
                renderer=CV2DRenderer(),
                wind_generator_fn=generate_wind,
                container_tag='mss6',
-               keep_sim_alive=True)
+               video_speed=10)
 env = RecordVideo(env, video_folder='./output/videos/')
 
 truncated = False

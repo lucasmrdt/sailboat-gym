@@ -6,7 +6,7 @@ import numpy as np
 from typing import TypedDict
 
 from ...utils import ProfilingMeta, is_debugging, DurationProgress
-from ...types import Action, Observation
+from ...types import Action, Observation, ResetInfo
 
 
 class Vector3(TypedDict):
@@ -32,14 +32,23 @@ class SimObservation(TypedDict):
     wind: Vector2
 
 
-class LSASim(metaclass=ProfilingMeta):
-    PORT = 5555  # set in Dockerfile
+class SimResetInfo(TypedDict):
+    min_position: Vector3
+    max_position: Vector3
 
-    def __init__(self, container_tag='mss1') -> None:
+
+class LSASim(metaclass=ProfilingMeta):
+    DEFAULT_PORT = 5555  # set in Dockerfile
+
+    def __init__(self, container_tag='mss1', name='default') -> None:
+        self.wind = None
+        self.sim_rate = None
+
         if is_debugging():
             print('[LSASim] Launching docker container')
         try:
-            self.container = self.__launch_or_get_container(container_tag)
+            self.container, self.port = self.__launch_or_get_container(container_tag,
+                                                                       name)
             self.__wait_until_ready()
             self.socket = self.__create_connection()
         except Exception as e:
@@ -58,7 +67,8 @@ class LSASim(metaclass=ProfilingMeta):
         })
         msg = self.__recv_msg()
         obs = self.__parse_sim_obs(msg['obs'])
-        return obs, msg['info']
+        info = self.__parse_sim_reset_info(msg['info'])
+        return obs, info
 
     def step(self, action: Action):
         self.__send_msg({
@@ -92,7 +102,35 @@ class LSASim(metaclass=ProfilingMeta):
             'wind': np.array([obs['wind']['x'], obs['wind']['y']], dtype=np.float32),
         }
 
-    def __launch_or_get_container(self, container_tag):
+    def __parse_sim_reset_info(self, info: SimResetInfo) -> ResetInfo:
+        min_pos = np.array([info['min_position']['x'],
+                            info['min_position']['y'],
+                            0])
+        max_pos = np.array([info['max_position']['x'],
+                            info['max_position']['y'],
+                            1])
+        map_bounds = np.array([min_pos, max_pos], dtype=np.float32)
+        return {
+            'map_bounds': map_bounds,
+        }
+
+    def __get_available_port(self):
+        def get_random_port():
+            # https://stackoverflow.com/a/46023565
+            return np.random.randint(49152, 65535)
+
+        port = get_random_port()
+        while True:
+            try:
+                context = zmq.Context()
+                socket = context.socket(zmq.REQ)
+                socket.bind(f'tcp://*:{port}')
+                socket.close()
+                return port
+            except zmq.error.ZMQError:
+                port = get_random_port()
+
+    def __launch_or_get_container(self, container_tag, name):
         with DurationProgress(total=7, desc='Launching docker container'):
             try:
                 client = docker.from_env()
@@ -102,26 +140,26 @@ class LSASim(metaclass=ProfilingMeta):
                 raise Exception(
                     'Docker socket is not detected. Please start docker and try again or make sure that you have correctly installed docker (MacOS: refer to this instruction https://stackoverflow.com/a/76125150).')
 
-            name = f'sailboat-sim-lsa-gym-{container_tag}'
+            name = f'sailboat-sim-lsa-gym-{container_tag}-{name}'
 
             # try to find an existing container with the given name
-            if client.containers.list(filters={'name': name}):
+            try:
                 container = client.containers.get(name)
-            else:
+            except docker.errors.NotFound:
                 container = None
             if container:
                 if container.status == 'running':
+                    port = container.attrs['NetworkSettings']['Ports'][
+                        f'{self.DEFAULT_PORT}/tcp'][0]['HostPort']
                     if is_debugging():
-                        print('[LSASim] Found existing docker container')
-                    return container
+                        print(
+                            f'\n[LSASim] Found existing docker container {name} running on port {port}')
+                    return container, port
                 else:
                     container.remove()
 
-            # kill all other containers which are bound to the same port
-            for container in client.containers.list():
-                ports = container.ports
-                if ports and f'{self.PORT}/tcp' in ports:
-                    container.kill()
+            # find an available port
+            port = self.__get_available_port()
 
             # launch a new container if none found or the existing container is not running
             try:
@@ -130,7 +168,8 @@ class LSASim(metaclass=ProfilingMeta):
                     detach=True,
                     name=name,
                     ports={
-                        f'{self.PORT}/tcp': self.PORT
+                        f'{self.DEFAULT_PORT}/tcp': port,
+                        '22/tcp': None,
                     },
                     remove=True,
                 )
@@ -156,9 +195,9 @@ class LSASim(metaclass=ProfilingMeta):
                 )
 
             if is_debugging():
-                print('[LSASim] Launched new docker container')
+                print('\n[LSASim] Launched new docker container')
 
-        return container
+        return container, port
 
     def __wait_until_ready(self):
         with DurationProgress(total=17, desc='Waiting for docker container to be ready'):
@@ -171,7 +210,7 @@ class LSASim(metaclass=ProfilingMeta):
     def __create_connection(self):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
-        socket.connect(f'tcp://localhost:{self.PORT}')
+        socket.connect(f'tcp://localhost:{self.port}')
         return socket
 
     def __send_msg(self, msg):

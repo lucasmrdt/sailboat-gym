@@ -4,6 +4,7 @@ from .envs import *
 from .renderers import *
 from .types import *
 from .utils import *
+from .abstracts import *
 
 register(
     id='SailboatLSAEnv-v0',
@@ -20,4 +21,4 @@ __all__ = [
     'GymAction'
 ]
 
-__version__ = '1.0.11'
+__version__ = '1.0.13'

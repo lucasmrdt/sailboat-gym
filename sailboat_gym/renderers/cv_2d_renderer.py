@@ -4,7 +4,7 @@ import numpy as np
 from pydantic.utils import deep_update
 
 from ..types import Observation
-from ..interfaces import IRenderer
+from ..abstracts import AbcRender
 from ..utils import ProfilingMeta
 
 BLACK = (0, 0, 0)
@@ -61,13 +61,11 @@ class RendererObservation(metaclass=ProfilingMeta):
         self.wind = obs["wind"]
 
 
-class CV2DRenderer(IRenderer):
+class CV2DRenderer(AbcRender):
     def __init__(self, size=512, padding=30, vector_scale=10, style={}):
         self.size = size
         self.padding = padding
         self.vector_scale = vector_scale
-        self.min_position = None
-        self.max_position = None
         self.map_bounds = None
         self.center = None
 
@@ -281,19 +279,12 @@ class CV2DRenderer(IRenderer):
     def get_render_modes(self) -> List[str]:
         return ['rgb_array']
 
-    def setup(self, min_position, max_position):
-        self.min_position = min_position
-        self.max_position = max_position
-        self.map_bounds = np.array([
-            [min_position[0], min_position[1]],
-            [max_position[0], max_position[1]],
-        ])
+    def setup(self, map_bounds):
+        self.map_bounds = map_bounds[:, 0:2]  # ignore z axis
         self.center = (self.map_bounds[0] + self.map_bounds[1]) / 2
 
-    def render(self, observation):
-        assert (self.min_position is not None
-                and self.max_position is not None
-                and self.map_bounds is not None
+    def render(self, observation, draw_extra_fct=None):
+        assert (self.map_bounds is not None
                 and self.center is not None), "Please call setup() first."
 
         img = self.__create_empty_img()
@@ -313,6 +304,10 @@ class CV2DRenderer(IRenderer):
         self.__draw_sail(img, obs)
         self.__draw_sail_velocity(img, obs)
         self.__draw_boat_center(img, obs)
+
+        # draw extra stuff
+        if draw_extra_fct is not None:
+            draw_extra_fct(img, observation)
 
         # flip vertically
         img = img[::-1, :, :]

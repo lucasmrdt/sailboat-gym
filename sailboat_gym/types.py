@@ -20,6 +20,10 @@ class Action(TypedDict):
     theta_sail: np.ndarray[1]
 
 
+class ResetInfo(TypedDict):
+    map_bounds: np.ndarray[2, 3]  # min, max
+
+
 GymObservation = spaces.Dict({
     "p_boat": spaces.Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32),
     "dt_p_boat": spaces.Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32),
