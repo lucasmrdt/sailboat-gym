@@ -2,29 +2,32 @@ import numpy as np
 import tqdm
 from itertools import count
 import gymnasium as gym
+from gymnasium.wrappers.time_limit import TimeLimit
 from gymnasium.wrappers.record_video import RecordVideo
-from sailboat_gym import CV2DRenderer
+
+from sailboat_gym import CV2DRenderer, EPISODE_LENGTH, Observation
 
 
-def ctrl(_):
-    rudder_angle = np.deg2rad(-20)
-    sail_angle = np.deg2rad(+20)
+def ctrl(obs: Observation):
+    wanted_heading = 0
+    rudder_angle = obs['theta_boat'][2] - wanted_heading
+    sail_angle = np.deg2rad(-30)
     return {'theta_rudder': np.array(rudder_angle), 'theta_sail': np.array(sail_angle)}
 
 
-def generate_wind(seed):
-    return [-2, 0]
+def generate_wind(_):
+    theta_wind = np.deg2rad(-(90+180))
+    wind_speed = 3
+    return np.array([np.cos(theta_wind), np.sin(theta_wind)]) * wind_speed
 
 
-# mss4 -> x8-x9
-# mss5 -> x9-x10
-# mss6 -> x8-x10
-# mss8 -> x6-x10
 env = gym.make('SailboatLSAEnv-v0',
                renderer=CV2DRenderer(),
                wind_generator_fn=generate_wind,
-               container_tag='mss6',
-               video_speed=10)
+               container_tag='mss1',
+               video_speed=20,
+               keep_sim_alive=True)
+env = TimeLimit(env, max_episode_steps=EPISODE_LENGTH)
 env = RecordVideo(env, video_folder='./output/videos/')
 
 truncated = False
@@ -32,7 +35,7 @@ obs, info = env.reset(seed=10)
 env.render()
 for _ in tqdm.tqdm(count(), desc='Running simulation'):
     obs, reward, terminated, truncated, info = env.step(ctrl(obs))
-    if truncated:
+    if terminated or truncated:
         break
     env.render()
 env.close()

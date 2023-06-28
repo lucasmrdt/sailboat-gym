@@ -71,6 +71,7 @@ class LSASim(metaclass=ProfilingMeta):
         return obs, info
 
     def step(self, action: Action):
+        # eps = np.random.normal(0, 0.01)
         self.__send_msg({
             'action': {
                 'theta_rudder': action['theta_rudder'].item(),

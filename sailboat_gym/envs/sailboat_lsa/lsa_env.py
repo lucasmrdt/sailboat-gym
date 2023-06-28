@@ -12,7 +12,7 @@ from .lsa_sim import LSASim
 class SailboatLSAEnv(SailboatEnv):
     SIM_RATE = 10  # Hz
 
-    def __init__(self, reward_fn: Callable[[Observation, Action], float] = lambda *_: 0, renderer: AbcRender = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1', name='default'):
+    def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: AbcRender = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1', name='default'):
         """Sailboat LSA environment
 
         Args:
@@ -69,8 +69,9 @@ class SailboatLSAEnv(SailboatEnv):
         return self.obs, info
 
     def step(self, action: Action):
-        self.obs, terminated, info = self.sim.step(action)
-        reward = self.reward_fn(self.obs, action)
+        next_obs, terminated, info = self.sim.step(action)
+        reward = self.reward_fn(self.obs, action, next_obs)
+        self.obs = next_obs
 
         if is_debugging():
             print('\nStepping environment:')
