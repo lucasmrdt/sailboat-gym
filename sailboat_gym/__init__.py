@@ -6,12 +6,11 @@ from .types import *
 from .utils import *
 from .abstracts import *
 
-EPISODE_LENGTH = 60 * SailboatLSAEnv.SIM_RATE  # 60 seconds * 10 steps per second
+NB_STEPS_PER_SECONDS = SailboatLSAEnv.SIM_RATE
 
 register(
     id='SailboatLSAEnv-v0',
     entry_point='sailboat_gym.envs:SailboatLSAEnv',
-    # max_episode_steps=EPISODE_LENGTH,
 )
 
 __all__ = [
@@ -23,4 +22,4 @@ __all__ = [
     'GymAction'
 ]
 
-__version__ = '1.0.14'
+__version__ = '1.0.15'

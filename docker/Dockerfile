@@ -28,7 +28,7 @@ RUN git config --global http.postBuffer 1048576000
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/lucasmrdt/usv_sim_lsa \
     && cd usv_sim_lsa \
-    && git checkout 42d8a7d9 \
+    && git checkout 926c4fed \
     && git submodule init \
     && git submodule update
 

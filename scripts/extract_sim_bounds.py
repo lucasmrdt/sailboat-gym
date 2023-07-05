@@ -5,14 +5,16 @@ sys.path.append('.')  # noqa
 import tqdm
 import pickle
 import click
+import threading
 import os.path as osp
 import numpy as np
 import gymnasium as gym
 from itertools import count
 from collections import defaultdict
 from gymnasium.wrappers.time_limit import TimeLimit
+from gymnasium.wrappers.record_video import RecordVideo
 
-from sailboat_gym import CV2DRenderer, EPISODE_LENGTH
+from sailboat_gym import CV2DRenderer, NB_STEPS_PER_SECONDS
 
 current_dir = osp.dirname(osp.abspath(__file__))
 
@@ -28,12 +30,16 @@ def generate_wind(_):
     return np.array([np.cos(theta_wind_rad), np.sin(theta_wind_rad)])*global_wind_velocity
 
 
-env = gym.make('SailboatLSAEnv-v0',
-               renderer=CV2DRenderer(),
-               wind_generator_fn=generate_wind,
-               container_tag='mss5',
-               keep_sim_alive=True)
-env = TimeLimit(env, max_episode_steps=EPISODE_LENGTH/2)
+def create_env(i):
+    env = gym.make('SailboatLSAEnv-v0',
+                   renderer=CV2DRenderer(),
+                   wind_generator_fn=generate_wind,
+                   container_tag='mss1',
+                   name=f'{i}',
+                   keep_sim_alive=True)
+    env = TimeLimit(env, max_episode_steps=NB_STEPS_PER_SECONDS*10)
+    # env = RecordVideo(env, video_folder='./output/videos/')
+    return env
 
 
 def get_vmc(obs):
@@ -60,13 +66,12 @@ def save_bounds(bounds, idx):
     print(f'Saved bounds to file: {file_path}')
 
 
-def run_simulation(bounds, theta_wind, theta_sail):
+def run_simulation(env, bounds, theta_wind, theta_sail):
     global global_theta_wind
     global_theta_wind = theta_wind
 
     def ctrl(_):
-        sail_angle = np.deg2rad(theta_sail)
-        return {'theta_rudder': np.array(0), 'theta_sail': np.array(sail_angle)}
+        return {'theta_rudder': np.array(0), 'theta_sail': np.array(np.deg2rad(theta_sail))}
 
     obs, info = env.reset(seed=0)
     for _ in tqdm.tqdm(count(), desc='Running simulation'):
@@ -100,6 +105,8 @@ def extract_sim_stats(wind_velocity):
     global global_wind_velocity
     global_wind_velocity = int(wind_velocity)
 
+    envs = [create_env(i) for i in range(1)]
+
     bounds_by_wind_by_sail_by_var = defaultdict(
         lambda: defaultdict(lambda: defaultdict(lambda: (np.inf, -np.inf))))
 
@@ -108,14 +115,14 @@ def extract_sim_stats(wind_velocity):
         print(f'wind angle: {theta_wind}')
         for theta_sail in range(-90, 90+1, 5):
             print(f'\tsail angle: {theta_sail}')
-            for _ in range(4):
-                run_simulation(bounds_by_wind_by_sail_by_var,
-                               theta_wind,
-                               theta_sail)
-                break
-            break
+            threads = [
+                threading.Thread(target=run_simulation,
+                                 args=(env, bounds_by_wind_by_sail_by_var, theta_wind, theta_sail)) for env in envs]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
         save_bounds(bounds_by_wind_by_sail_by_var, i)
-        break
 
 
 if __name__ == '__main__':
