@@ -9,7 +9,7 @@ from functools import lru_cache
 from ..envs import env_by_name
 
 current_dir = osp.dirname(osp.abspath(__file__))
-pkl_dir = osp.join(current_dir, '..', '..', 'pkl')
+pkl_dir = osp.join(current_dir, '..', 'pkl')
 
 
 def extract_index(filepath):
@@ -59,7 +59,8 @@ def extract_best_sail(df):
 @lru_cache()
 def load_best_sail_dict(env_name, wind_velocity=1):
     assert env_name in list(env_by_name.keys()), f'Env {env_name} not found.'
-    pathname = osp.join(pkl_dir, f'{env_name}_bounds_v_wind_{wind_velocity}.pkl')
+    pathname = osp.join(
+        pkl_dir, f'{env_name}_bounds_v_wind_{wind_velocity}.pkl')
     filepaths = sorted(glob(pathname), key=extract_index, reverse=True)
     assert filepaths, f'Error: Please run `python3 scripts/extract_sim_bounds.py --env-name={env_name} --wind-velocity={wind_velocity}` to extract the velocity bounds first.'
     filepath = filepaths[0]
@@ -74,6 +75,6 @@ def load_best_sail_dict(env_name, wind_velocity=1):
 def get_best_sail(env_name, theta_wind, wind_velocity=1):
     best_sail_dict = load_best_sail_dict(env_name, wind_velocity)
     best_sail = np.interp(theta_wind,
-                xp=list(best_sail_dict.keys()),
-                fp=list(best_sail_dict.values()))
+                          xp=list(best_sail_dict.keys()),
+                          fp=list(best_sail_dict.values()))
     return best_sail
