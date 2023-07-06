@@ -56,7 +56,7 @@ def extract_best_sail(df):
     return theta_wind, best_sail
 
 
-# @lru_cache()
+@lru_cache()
 def load_best_sail_dict(env_name, wind_velocity=1):
     assert env_name in list(env_by_name.keys()), f'Env {env_name} not found.'
     pathname = osp.join(pkl_dir, f'{env_name}_bounds_v_wind_{wind_velocity}.pkl')
