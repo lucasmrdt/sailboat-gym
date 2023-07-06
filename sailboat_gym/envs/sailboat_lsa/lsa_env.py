@@ -10,7 +10,7 @@ from .lsa_sim import LSASim
 
 
 class SailboatLSAEnv(SailboatEnv):
-    SIM_RATE = 10  # Hz
+    NB_STEPS_PER_SECONDS = 10  # Hz
 
     def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: AbcRender = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1', name='default'):
         """Sailboat LSA environment
@@ -30,7 +30,7 @@ class SailboatLSAEnv(SailboatEnv):
         self.render_mode = renderer.get_render_mode() if renderer else None
         self.metadata = {
             'render_modes': renderer.get_render_modes() if renderer else [],
-            'render_fps': video_speed * self.SIM_RATE,
+            'render_fps': video_speed * self.NB_STEPS_PER_SECONDS,
         }
 
         self.sim = LSASim(container_tag, name)
@@ -53,7 +53,7 @@ class SailboatLSAEnv(SailboatEnv):
         else:
             wind = np.random.normal(0, 2, 2)
 
-        self.obs, info = self.sim.reset(wind, self.SIM_RATE)
+        self.obs, info = self.sim.reset(wind, self.NB_STEPS_PER_SECONDS)
 
         # setup the renderer, its needed to know the min/max position of the boat
         if self.renderer:
@@ -62,7 +62,7 @@ class SailboatLSAEnv(SailboatEnv):
         if is_debugging():
             print('\nResetting environment:')
             print(f'  -> Wind: {wind}')
-            print(f'  -> frequency: {self.SIM_RATE} Hz')
+            print(f'  -> frequency: {self.NB_STEPS_PER_SECONDS} Hz')
             print(f'  <- Obs: {self.obs}')
             print(f'  <- Info: {info}')
 

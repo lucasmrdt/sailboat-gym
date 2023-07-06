@@ -1,19 +1,18 @@
 import numpy as np
 import tqdm
-from itertools import count
 import gymnasium as gym
 from gymnasium.wrappers.time_limit import TimeLimit
 from gymnasium.wrappers.record_video import RecordVideo
 
 from sailboat_gym import CV2DRenderer, Observation, NB_STEPS_PER_SECONDS
 
-EPISODE_LENGTH = NB_STEPS_PER_SECONDS * 60 * 3  # 3 minutes
+EPISODE_LENGTH = NB_STEPS_PER_SECONDS * 60 * 1  # 3 minutes
 
 
 def ctrl(obs: Observation):
     wanted_heading = np.deg2rad(-30)
     rudder_angle = obs['theta_boat'][2] - wanted_heading
-    sail_angle = np.deg2rad(-30)
+    sail_angle = np.deg2rad(-90)
     return {'theta_rudder': np.array(rudder_angle), 'theta_sail': np.array(sail_angle)}
 
 

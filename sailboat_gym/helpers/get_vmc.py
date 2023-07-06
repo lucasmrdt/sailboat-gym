@@ -5,10 +5,13 @@ import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from functools import lru_cache
 from glob import glob
 
+from ..envs import env_by_name
+
 current_dir = osp.dirname(osp.abspath(__file__))
-pickle_dir = osp.join(current_dir, '../output/pkl')
+pkl_dir = osp.join(current_dir, '..', '..', 'pkl')
 
 
 def extract_index(filepath):
@@ -36,32 +39,23 @@ def extract_vmc_from_df(df):
     v_max = np.maximum(0, v_max)
     return v_max.index, v_max.values
 
-
-def get_vmc(wind_velocity):
-    pathname = osp.join(pickle_dir, f'bounds_(v_wind_{wind_velocity}).*.pkl')
+# @lru_cache()
+def load_vmc_dict(env_name, wind_velocity=1):
+    assert env_name in list(env_by_name.keys()), f'Env {env_name} not found.'
+    pathname = osp.join(pkl_dir, f'{env_name}_bounds_v_wind_{wind_velocity}.pkl')
     filepaths = sorted(glob(pathname), key=extract_index, reverse=True)
-    if not filepaths:
-        print(
-            f'Error: Please run `python3 extract_sim_bounds.py --wind-velocity={wind_velocity}` to extract the velocity bounds first.')
-        return
+    assert filepaths, f'Error: Please run `python3 scripts/extract_sim_bounds.py --env-name={env_name} --wind-velocity={wind_velocity}` to extract the velocity bounds first.'
     filepath = filepaths[0]
     d = pickle.load(open(filepath, 'rb'))
     df = dict_to_df(d)
-
     thetas, vmc = extract_vmc_from_df(df)
     thetas = np.deg2rad(thetas)
     vmc_dict = dict(zip(thetas, vmc))
     return vmc_dict
 
-
-@click.command()
-@click.option('--wind-velocity', default=1, help='Wind velocity', type=int)
-def get_vmc_cmd(wind_velocity):
-    vmc_dict = get_vmc(wind_velocity)
-    output_path = osp.join(pickle_dir, f'vmc_(v_wind_{wind_velocity}).pkl')
-    pickle.dump(vmc_dict, open(output_path, 'wb'))
-    print(f'VMC for v_wind={wind_velocity} saved at {output_path}.')
-
-
-if __name__ == '__main__':
-    get_vmc_cmd()
+def get_vmc(env_name, theta_wind, wind_velocity=1):
+    vmc_dict = load_vmc_dict(env_name, wind_velocity)
+    vmc = np.interp(theta_wind,
+                xp=list(vmc_dict.keys()),
+                fp=list(vmc_dict.values()))
+    return vmc

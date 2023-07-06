@@ -44,5 +44,4 @@ env/
 /coverage.xml
 /.coverage
 *.mp4
-*.pkl
 output

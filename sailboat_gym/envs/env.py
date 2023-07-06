@@ -8,6 +8,11 @@ from ..abstracts import AbcRender
 
 
 class SailboatEnv(gym.Env, metaclass=ProfilingMeta):
+    NB_STEPS_PER_SECONDS: int # Hz
+
+    render_mode: str
+    metadata: dict
+
     action_space = GymAction
     observation_space = GymObservation
 
