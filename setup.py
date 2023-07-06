@@ -81,6 +81,8 @@ setup(
         "sailboat_gym": [
             "docs/demo.gif",
             "docs/sailing_schema.png",
+            "pkl/SailboatLSAEnv-v0_bounds_v_wind_1.pkl",
+            "pkl/SailboatLSAEnv-v0_bounds_v_wind_2.pkl",
         ]
     },
 )
