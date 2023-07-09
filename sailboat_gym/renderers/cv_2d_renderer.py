@@ -154,7 +154,7 @@ class CV2DRenderer(AbcRender):
         img_center = np.array([self.size, self.size]) / 2
         cv2.arrowedLine(img,
                         tuple(img_center.astype(int)),
-                        tuple((img_center + obs.wind).astype(int)),
+                        tuple((img_center + obs.wind*self.vector_scale).astype(int)),
                         self.style["wind"]["color"],
                         self.style["wind"]["width"],
                         tipLength=0.2,
@@ -293,6 +293,10 @@ class CV2DRenderer(AbcRender):
         obs = RendererObservation(observation)
         self.__transform_obs_to_fit_in_img(obs)
 
+        # draw extra stuff
+        if draw_extra_fct is not None:
+            draw_extra_fct(img, observation)
+
         # draw map
         self.__draw_borders(img)
         self.__draw_wind(img, obs)
@@ -304,10 +308,6 @@ class CV2DRenderer(AbcRender):
         self.__draw_sail(img, obs)
         self.__draw_sail_velocity(img, obs)
         self.__draw_boat_center(img, obs)
-
-        # draw extra stuff
-        if draw_extra_fct is not None:
-            draw_extra_fct(img, observation)
 
         # flip vertically
         img = img[::-1, :, :]
