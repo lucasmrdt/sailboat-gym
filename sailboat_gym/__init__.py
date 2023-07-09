@@ -5,4 +5,4 @@ from .types import *
 from .abstracts import *
 from .helpers import *
 
-__version__ = '1.0.20'
+__version__ = '1.0.21'

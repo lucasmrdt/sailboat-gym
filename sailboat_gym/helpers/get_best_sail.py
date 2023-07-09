@@ -73,6 +73,7 @@ def load_best_sail_dict(env_name, wind_velocity=1):
 
 
 def get_best_sail(env_name, theta_wind, wind_velocity=1):
+    theta_wind = theta_wind % (2 * np.pi)
     best_sail_dict = load_best_sail_dict(env_name, wind_velocity)
     best_sail = np.interp(theta_wind,
                           xp=list(best_sail_dict.keys()),
