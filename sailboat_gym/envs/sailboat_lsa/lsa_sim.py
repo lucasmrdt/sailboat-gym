@@ -46,17 +46,10 @@ class LSASim(metaclass=ProfilingMeta):
 
         if is_debugging():
             print('[LSASim] Launching docker container')
-        try:
-            self.container, self.port = self.__launch_or_get_container(container_tag,
-                                                                       name)
-            self.__wait_until_ready()
-            self.socket = self.__create_connection()
-        except Exception as e:
-            if is_debugging():
-                raise e
-            else:
-                print(f'[LSASim] Failed to launch docker container: {str(e)}')
-                exit(1)
+        self.container, self.port = self.__launch_or_get_container(container_tag,
+                                                                   name)
+        self.__wait_until_ready()
+        self.socket = self.__create_connection()
 
     def reset(self, wind: np.ndarray[2], sim_rate: int):
         self.__send_msg({
@@ -138,8 +131,8 @@ class LSASim(metaclass=ProfilingMeta):
             except docker.errors.DockerException as e:
                 if is_debugging():
                     raise e
-                raise Exception(
-                    'Docker socket is not detected. Please start docker and try again or make sure that you have correctly installed docker (MacOS: refer to this instruction https://stackoverflow.com/a/76125150).')
+                raise RuntimeError(
+                    'Docker socket is not detected. Please start docker and try again or make sure that you have correctly installed docker (MacOS: refer to this instruction https://stackoverflow.com/a/76125150).') from e
 
             name = f'sailboat-sim-lsa-gym-{container_tag}-{name}'
 
@@ -174,26 +167,26 @@ class LSASim(metaclass=ProfilingMeta):
                     },
                     remove=True,
                 )
-            except docker.errors.NotFound:
-                raise Exception(
+            except docker.errors.NotFound as e:
+                raise RuntimeError(
                     f'Could not find docker image lucasmrdt/sailboat-sim-lsa-gym:{container_tag}. '
                     'Please make sure the image exists and try again.'
-                )
+                ) from e
             except docker.errors.APIError as e:
-                raise Exception(
+                raise RuntimeError(
                     f'Error communicating with Docker API: {str(e)}. '
                     'Please check that the Docker daemon is running and try again.'
-                )
+                ) from e
             except docker.errors.ContainerError as e:
-                raise Exception(
+                raise RuntimeError(
                     f'Container exited with non-zero exit code: {str(e)}. '
                     'Please check the container logs for more information.'
-                )
+                ) from e
             except docker.errors.ImageNotFound as e:
-                raise Exception(
+                raise RuntimeError(
                     f'Image not found: {str(e)}. '
                     'Please check that the image exists on the Docker registry and try again.'
-                )
+                ) from e
 
             if is_debugging():
                 print('\n[LSASim] Launched new docker container')
@@ -220,5 +213,5 @@ class LSASim(metaclass=ProfilingMeta):
     def __recv_msg(self):
         msg = msgpack.unpackb(self.socket.recv(), raw=False)
         if 'error' in msg:
-            raise Exception(msg['error'])
+            raise RuntimeError(msg['error'])
         return msg

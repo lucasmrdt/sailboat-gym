@@ -30,7 +30,7 @@ class SailboatLSAEnv(SailboatEnv):
         self.render_mode = renderer.get_render_mode() if renderer else None
         self.metadata = {
             'render_modes': renderer.get_render_modes() if renderer else [],
-            'render_fps': video_speed * self.NB_STEPS_PER_SECONDS,
+            'render_fps': float(video_speed * self.NB_STEPS_PER_SECONDS),
         }
 
         self.sim = LSASim(container_tag, name)

@@ -1,5 +1,12 @@
 #!/bin/zsh
 
+# Test
+python3 run_tests.py
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed"
+    exit 1
+fi
+
 # Remove unnecessary files
 rm -rf build dist sailboat_gym.egg-info
 

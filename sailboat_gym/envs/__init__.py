@@ -7,7 +7,8 @@ env_by_name = {
     'SailboatLSAEnv-v0': SailboatLSAEnv,
 }
 
-register(
-    id='SailboatLSAEnv-v0',
-    entry_point='sailboat_gym.envs:SailboatLSAEnv',
-)
+for name, env in env_by_name.items():
+    register(
+        id=name,
+        entry_point=f'sailboat_gym.envs:{env.__name__}',
+    )
