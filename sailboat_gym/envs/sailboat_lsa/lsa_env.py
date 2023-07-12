@@ -12,7 +12,7 @@ from .lsa_sim import LSASim
 class SailboatLSAEnv(SailboatEnv):
     NB_STEPS_PER_SECONDS = 10  # Hz
 
-    def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: AbcRender = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1', name='default'):
+    def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: AbcRender = None, wind_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1', name='default', map_scale=1):
         """Sailboat LSA environment
 
         Args:
@@ -23,6 +23,7 @@ class SailboatLSAEnv(SailboatEnv):
             keep_sim_alive (bool, optional): Keep the simulation running even after the program exits. Defaults to False.
             container_tag (str, optional): Docker tag to be used for the simulation, see the documentation for more information. Defaults to 'mss1'.
             name ([type], optional): Name of the simulation, required to run multiples environment on same machine.. Defaults to 'default'.
+            map_scale (int, optional): Scale of the map, used to scale the map in the renderer. Defaults to 1.
         """
         super().__init__()
 
@@ -38,6 +39,7 @@ class SailboatLSAEnv(SailboatEnv):
         self.renderer = renderer
         self.obs = None
         self.wind_generator_fn = wind_generator_fn
+        self.map_scale = map_scale
 
         # Stop the simulation when the program exits
         if not keep_sim_alive:
@@ -57,7 +59,7 @@ class SailboatLSAEnv(SailboatEnv):
 
         # setup the renderer, its needed to know the min/max position of the boat
         if self.renderer:
-            self.renderer.setup(info['map_bounds'])
+            self.renderer.setup(info['map_bounds']*self.map_scale)
 
         if is_debugging():
             print('\nResetting environment:')
