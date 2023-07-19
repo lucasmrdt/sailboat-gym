@@ -6,4 +6,4 @@ from .abstracts import *
 from .helpers import *
 from .utils import *
 
-__version__ = '1.0.24'
+__version__ = '1.0.25'

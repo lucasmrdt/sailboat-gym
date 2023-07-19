@@ -54,6 +54,7 @@ class LSASim(metaclass=ProfilingMeta):
         self.socket = None
         self.is_running = False
         self.is_close = False
+        self.lock = threading.Lock()
 
         self.__init_simulation()
         threading.Thread(target=self.__keep_trying_to_pause_simulation_if_not_used, daemon=True).start()  # noqa
@@ -98,14 +99,16 @@ class LSASim(metaclass=ProfilingMeta):
             self.container.kill()
 
     def pause_if_needed(self):
-        if self.is_running:
-            self.container.pause()
-            self.is_running = False
+        with self.lock:
+            if self.is_running:
+                self.container.pause()
+                self.is_running = False
 
     def resume_if_needed(self):
-        if not self.is_running:
-            self.container.unpause()
-            self.is_running = True
+        with self.lock:
+            if not self.is_running:
+                self.container.unpause()
+                self.is_running = True
 
     def __init_simulation(self):
         if is_debugging():
@@ -116,7 +119,10 @@ class LSASim(metaclass=ProfilingMeta):
         self.pause_if_needed()
 
     def __keep_trying_to_pause_simulation_if_not_used(self):
-        while not self.is_close:
+        while True:
+            with self.lock:
+                if self.is_close:
+                    break
             if is_debugging():
                 print('[LSASim] Checking if simulation is used')
             if self.last_step_time and (datetime.datetime.now() - self.last_step_time).total_seconds() > 5:
