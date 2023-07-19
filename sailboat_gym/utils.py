@@ -12,6 +12,11 @@ def is_debugging():
 
 
 @functools.lru_cache(maxsize=1)
+def is_debugging_all():
+    return os.getenv('DEBUG') == 'all'
+
+
+@functools.lru_cache(maxsize=1)
 def is_profiling():
     return os.getenv('PROFILING') is not None
 

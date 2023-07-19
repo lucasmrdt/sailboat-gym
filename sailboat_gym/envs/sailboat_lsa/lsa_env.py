@@ -4,7 +4,7 @@ from typing import Callable
 
 from ...abstracts import AbcRender
 from ...types import Observation, Action
-from ...utils import is_debugging
+from ...utils import is_debugging_all
 from ..env import SailboatEnv
 from .lsa_sim import LSASim
 
@@ -61,7 +61,7 @@ class SailboatLSAEnv(SailboatEnv):
         if self.renderer:
             self.renderer.setup(info['map_bounds']*self.map_scale)
 
-        if is_debugging():
+        if is_debugging_all():
             print('\nResetting environment:')
             print(f'  -> Wind: {wind}')
             print(f'  -> frequency: {self.NB_STEPS_PER_SECONDS} Hz')
@@ -75,7 +75,7 @@ class SailboatLSAEnv(SailboatEnv):
         reward = self.reward_fn(self.obs, action, next_obs)
         self.obs = next_obs
 
-        if is_debugging():
+        if is_debugging_all():
             print('\nStepping environment:')
             print(f'  -> Action: {action}')
             print(f'  <- Obs: {self.obs}')
