@@ -31,3 +31,4 @@ def check_env_implementation(env: Type[SailboatEnv]):
         f'env.action_space must be a gym.Space'
     assert isinstance(env_instance.observation_space, gym.Space), \
         f'env.observation_space must be a gym.Space'
+    env_instance.close()
