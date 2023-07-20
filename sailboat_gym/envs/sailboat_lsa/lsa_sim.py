@@ -60,6 +60,9 @@ class LSASim(metaclass=ProfilingMeta):
         threading.Thread(target=self.__keep_trying_to_pause_simulation_if_not_used).start()  # noqa
 
     def reset(self, wind: np.ndarray[2], sim_rate: int):
+        if is_debugging():
+            print(
+                f'[LSASim] Resetting simulation with wind {wind} and sim_rate {sim_rate}')
         self.__send_msg({
             'reset': {
                 'wind': {'x': wind[0], 'y': wind[1]},
@@ -72,6 +75,8 @@ class LSASim(metaclass=ProfilingMeta):
         return obs, info
 
     def step(self, action: Action):
+        if is_debugging():
+            print(f'[LSASim] Sending action {action}')
         self.__send_msg({
             'action': {
                 'theta_rudder': action['theta_rudder'].item(),
@@ -84,15 +89,15 @@ class LSASim(metaclass=ProfilingMeta):
         return obs, done, msg['info']
 
     def close(self):
+        if is_debugging():
+            print('[LSASim] Closing simulation')
         self.__send_msg({'close': True})
         self.__recv_msg()
-        with self.lock:
-            self.is_closed = True
+        self.is_closed = True
 
     def stop(self):
-        with self.lock:
-            if not self.is_closed:
-                self.close()
+        if not self.is_closed:
+            self.close()
         with DurationProgress(total=5, desc='Stopping docker container'):
             self.container.kill()
 
@@ -116,16 +121,14 @@ class LSASim(metaclass=ProfilingMeta):
 
     def __keep_trying_to_pause_simulation_if_not_used(self):
         while True:
-            if is_debugging():
-                print('[LSASim] Checking if simulation is used')
+            time.sleep(2)
             with self.lock:
                 if self.is_closed:
                     break
                 if self.last_request_time and (datetime.datetime.now() - self.last_request_time).total_seconds() > 5:
-                    if is_debugging():
+                    if is_debugging() and self.is_running:
                         print('[LSASim] Simulation is not used, pausing it')
                     self.pause_if_needed()
-            time.sleep(2)
 
     def __parse_sim_obs(self, obs: SimObservation) -> Observation:
         return {
