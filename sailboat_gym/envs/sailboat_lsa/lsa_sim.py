@@ -48,7 +48,7 @@ class LSASim(metaclass=ProfilingMeta):
 
         self.wind = None
         self.sim_rate = None
-        self.last_step_time = None
+        self.last_request_time = None
         self.container = None
         self.port = None
         self.socket = None
@@ -60,55 +60,54 @@ class LSASim(metaclass=ProfilingMeta):
         threading.Thread(target=self.__keep_trying_to_pause_simulation_if_not_used, daemon=True).start()  # noqa
 
     def reset(self, wind: np.ndarray[2], sim_rate: int):
-        self.last_step_time = datetime.datetime.now()
-        self.resume_if_needed()
+        with self.lock:
+            self.resume_if_needed()
+            self.__send_msg({
+                'reset': {
+                    'wind': {'x': wind[0], 'y': wind[1]},
+                    'freq': sim_rate,
+                }
+            })
+            msg = self.__recv_msg()
 
-        self.__send_msg({
-            'reset': {
-                'wind': {'x': wind[0], 'y': wind[1]},
-                'freq': sim_rate,
-            }
-        })
-        msg = self.__recv_msg()
         obs = self.__parse_sim_obs(msg['obs'])
         info = self.__parse_sim_reset_info(msg['info'])
         return obs, info
 
     def step(self, action: Action):
-        self.last_step_time = datetime.datetime.now()
-        self.resume_if_needed()
+        with self.lock:
+            self.resume_if_needed()
+            self.__send_msg({
+                'action': {
+                    'theta_rudder': action['theta_rudder'].item(),
+                    'theta_sail': action['theta_sail'].item(),
+                }
+            })
+            msg = self.__recv_msg()
 
-        self.__send_msg({
-            'action': {
-                'theta_rudder': action['theta_rudder'].item(),
-                'theta_sail': action['theta_sail'].item(),
-            }
-        })
-        msg = self.__recv_msg()
         obs = self.__parse_sim_obs(msg['obs'])
         done = msg['done']
         return obs, done, msg['info']
 
     def close(self):
-        self.resume_if_needed()
-        self.__send_msg({'close': True})
-        self.__recv_msg()
+        with self.lock:
+            self.resume_if_needed()
+            self.__send_msg({'close': True})
+            self.__recv_msg()
 
     def stop(self):
         with DurationProgress(total=5, desc='Stopping docker container'):
             self.container.kill()
 
     def pause_if_needed(self):
-        with self.lock:
-            if self.is_running:
-                self.container.pause()
-                self.is_running = False
+        if self.is_running:
+            self.container.pause()
+            self.is_running = False
 
     def resume_if_needed(self):
-        with self.lock:
-            if not self.is_running:
-                self.container.unpause()
-                self.is_running = True
+        if not self.is_running:
+            self.container.unpause()
+            self.is_running = True
 
     def __init_simulation(self):
         if is_debugging():
@@ -120,16 +119,16 @@ class LSASim(metaclass=ProfilingMeta):
 
     def __keep_trying_to_pause_simulation_if_not_used(self):
         while True:
+            if is_debugging():
+                print('[LSASim] Checking if simulation is used')
             with self.lock:
                 if self.is_close:
                     break
-            if is_debugging():
-                print('[LSASim] Checking if simulation is used')
-            if self.last_step_time and (datetime.datetime.now() - self.last_step_time).total_seconds() > 5:
-                if is_debugging():
-                    print('[LSASim] Simulation is not used, pausing it')
-                self.pause_if_needed()
-                self.last_step_time = None
+                if self.last_request_time and (datetime.datetime.now() - self.last_request_time).total_seconds() > 5:
+                    if is_debugging():
+                        print('[LSASim] Simulation is not used, pausing it')
+                    self.pause_if_needed()
+                    self.last_request_time = None
             time.sleep(2)
 
     def __parse_sim_obs(self, obs: SimObservation) -> Observation:
@@ -256,6 +255,7 @@ class LSASim(metaclass=ProfilingMeta):
         return socket
 
     def __send_msg(self, msg):
+        self.last_request_time = datetime.datetime.now()
         self.socket.send(msgpack.packb(msg))
 
     def __recv_msg(self):
