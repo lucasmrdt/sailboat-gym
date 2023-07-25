@@ -11,6 +11,25 @@ from ...utils import ProfilingMeta, is_debugging, DurationProgress
 from ...types import Action, Observation, ResetInfo
 
 
+def debounce(wait):
+    # from https://gist.github.com/walkermatt/2871026
+    """ Decorator that will postpone a functions
+        execution until after wait seconds
+        have elapsed since the last time it was invoked. """
+    def decorator(fn):
+        def debounced(*args, **kwargs):
+            def call_it():
+                fn(*args, **kwargs)
+            try:
+                debounced.t.cancel()
+            except (AttributeError):
+                pass
+            debounced.t = threading.Timer(wait, call_it)
+            debounced.t.start()
+        return debounced
+    return decorator
+
+
 class Vector3(TypedDict):
     x: float
     y: float
@@ -48,16 +67,15 @@ class LSASim(metaclass=ProfilingMeta):
 
         self.wind = None
         self.sim_rate = None
-        self.last_request_time = None
         self.container = None
         self.port = None
         self.socket = None
+
+        self.timer = None
         self.is_running = False
-        self.is_closed = False
         self.lock = threading.Lock()
 
         self.__init_simulation()
-        threading.Thread(target=self.__keep_trying_to_pause_simulation_if_not_used).start()  # noqa
 
     def reset(self, wind: np.ndarray[2], sim_rate: int):
         if is_debugging():
@@ -93,23 +111,32 @@ class LSASim(metaclass=ProfilingMeta):
             print('[LSASim] Closing simulation')
         self.__send_msg({'close': True})
         self.__recv_msg()
-        self.is_closed = True
 
     def stop(self):
-        if not self.is_closed:
-            self.close()
         with DurationProgress(total=5, desc='Stopping docker container'):
             self.container.kill()
 
-    def pause_if_needed(self):
-        if self.is_running:
-            self.container.pause()
-            self.is_running = False
+    @debounce(3)
+    def __pause_if_needed(self):
+        with self.lock:
+            if self.is_running:
+                self.is_running = False
+                try:
+                    self.container.pause()
+                except Exception as e:
+                    if is_debugging():
+                        raise e
+                    self.is_running = True
 
-    def resume_if_needed(self):
-        if not self.is_running:
-            self.container.unpause()
-            self.is_running = True
+    def __resume_if_needed(self):
+        with self.lock:
+            if not self.is_running:
+                try:
+                    self.container.unpause()
+                    self.is_running = True
+                except Exception as e:
+                    if is_debugging():
+                        raise e
 
     def __init_simulation(self):
         if is_debugging():
@@ -117,18 +144,31 @@ class LSASim(metaclass=ProfilingMeta):
         self.container, self.port, self.is_running = self.__launch_or_get_container(self.container_tag, self.name)  # noqa
         self.__wait_until_ready()
         self.socket = self.__create_connection()
-        self.pause_if_needed()
+        self.__pause_if_needed()
 
-    def __keep_trying_to_pause_simulation_if_not_used(self):
-        while True:
-            time.sleep(2)
-            with self.lock:
-                if self.is_closed:
-                    break
-                if self.last_request_time and (datetime.datetime.now() - self.last_request_time).total_seconds() > 5:
-                    if is_debugging() and self.is_running:
-                        print('[LSASim] Simulation is not used, pausing it')
-                    self.pause_if_needed()
+    # def __start_worker_if_needed(self):
+    #     if self.is_closed:
+    #         self.is_closed = False
+    #         threading.Thread(target=self.__keep_trying_to_pause_simulation_if_not_used).start()  # noqa
+
+    # def __stop_worker_if_needed(self):
+    #     if not self.is_closed:
+    #         self.is_closed = True
+
+    # def __keep_trying_to_pause_simulation_if_not_used(self):
+    #     while True:
+    #         time.sleep(2)
+    #         # print('[LSASim] Locking simulation')
+    #         with self.lock:
+    #             # print('[LSASim] Locked simulation')
+    #             if self.is_closed:
+    #                 # print('[LSASim] Simulation is closed, exiting')
+    #                 break
+    #             if self.last_request_time and (datetime.datetime.now() - self.last_request_time).total_seconds() > 5:
+    #                 # print('[LSASim] > 5 seconds since last request')
+    #                 if is_debugging() and self.is_running:
+    #                     print('[LSASim] Simulation is not used, pausing it')
+    #                 self.__pause_if_needed()
 
     def __parse_sim_obs(self, obs: SimObservation) -> Observation:
         return {
@@ -254,15 +294,14 @@ class LSASim(metaclass=ProfilingMeta):
         return socket
 
     def __send_msg(self, msg):
-        with self.lock:
-            self.resume_if_needed()
-            self.last_request_time = datetime.datetime.now()
-            self.socket.send(msgpack.packb(msg))
+        self.__resume_if_needed()
+        self.socket.send(msgpack.packb(msg))
+        self.__pause_if_needed()
 
     def __recv_msg(self):
-        with self.lock:
-            self.resume_if_needed()
-            msg = msgpack.unpackb(self.socket.recv(), raw=False)
-            if 'error' in msg:
-                raise RuntimeError(msg['error'])
-            return msg
+        self.__resume_if_needed()
+        msg = msgpack.unpackb(self.socket.recv(), raw=False)
+        if 'error' in msg:
+            raise RuntimeError(msg['error'])
+        self.__pause_if_needed()
+        return msg
