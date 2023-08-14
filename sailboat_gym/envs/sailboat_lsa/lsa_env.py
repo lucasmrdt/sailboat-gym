@@ -1,5 +1,5 @@
 import numpy as np
-import atexit
+import multiexit
 from typing import Callable
 
 from ...abstracts import AbcRender
@@ -43,7 +43,8 @@ class SailboatLSAEnv(SailboatEnv):
 
         # Stop the simulation when the program exits
         if not keep_sim_alive:
-            atexit.register(self.sim.stop)
+            multiexit.install()
+            multiexit.register(self.sim.stop)
 
     def reset(self, seed=None, **kwargs):
         super().reset(seed=seed, **kwargs)
