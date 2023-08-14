@@ -6,6 +6,7 @@ pydantic
 tqdm
 opencv-python
 docker
+multiexit
 
 # dev-only
 imageio-ffmpeg
