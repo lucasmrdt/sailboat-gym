@@ -1,5 +1,6 @@
 import numpy as np
 import multiexit
+import signal
 from typing import Callable
 
 from ...abstracts import AbcRender
@@ -40,11 +41,12 @@ class SailboatLSAEnv(SailboatEnv):
         self.obs = None
         self.wind_generator_fn = wind_generator_fn
         self.map_scale = map_scale
+        self.keep_sim_alive = keep_sim_alive
 
         # Stop the simulation when the program exits
         if not keep_sim_alive:
             multiexit.install()
-            multiexit.register(self.sim.stop)
+            multiexit.register(self.sim.stop, shared=True)
 
     def reset(self, seed=None, **kwargs):
         super().reset(seed=seed, **kwargs)
@@ -93,3 +95,7 @@ class SailboatLSAEnv(SailboatEnv):
     def close(self):
         self.sim.close()
         self.obs = None
+
+    def __del__(self):
+        if not self.keep_sim_alive:
+            self.sim.stop()
