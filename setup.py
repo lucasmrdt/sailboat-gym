@@ -68,14 +68,15 @@ setup(
     install_requires=[
         'gymnasium==0.28.1',
         'msgpack_python==0.5.6',
-        'numpy==1.24.3',
-        'pydantic==1.10.7',
         'pyzmq==25.0.2',
-        'tqdm==4.65.0',
-        'opencv-python==4.7.0.72',
-        'imageio-ffmpeg==0.4.8',
-        'docker==6.1.2',
-        'moviepy==1.0.3'
+        'numpy',
+        'pydantic',
+        'tqdm',
+        'opencv-python',
+        'imageio-ffmpeg',
+        'docker',
+        'moviepy',
+        'multiexit',
     ],
     package_data={
         "sailboat_gym": [
