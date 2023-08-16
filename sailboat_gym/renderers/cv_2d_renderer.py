@@ -32,7 +32,7 @@ def rotate_vector(vector: np.ndarray, angle: float):
 
 
 class RendererObservation(metaclass=ProfilingMeta):
-    def __init__(self, obs: Observation):
+    def _init_(self, obs: Observation):
         # heading angle
         self.theta_boat = obs["theta_boat"][2]
         self.dt_theta_boat = np.abs(obs["dt_theta_boat"][2]) * \
@@ -118,30 +118,30 @@ class CV2DRenderer(AbcRender):
         }
         self.style = deep_update(self.style, style)
 
-    def __create_empty_img(self):
+    def _create_empty_img(self):
         bg = np.array(self.style["background"])
         img = bg[None, None, :] + np.zeros((self.size, self.size, 3))
         return img.astype(np.uint8)
 
-    def __scale_to_fit_in_img(self, x):
+    def _scale_to_fit_in_img(self, x):
         return x / (self.map_bounds[1] - self.map_bounds[0]).max() * (self.size - 2 * self.padding)
 
-    def __translate_and_scale_to_fit_in_map(self, x):
-        return self.__scale_to_fit_in_img(x - self.map_bounds[0]) + self.padding
+    def _translate_and_scale_to_fit_in_map(self, x):
+        return self._scale_to_fit_in_img(x - self.map_bounds[0]) + self.padding
 
-    def __transform_obs_to_fit_in_img(self, obs: RendererObservation):
+    def _transform_obs_to_fit_in_img(self, obs: RendererObservation):
         # translate and scale positions
-        obs.p_boat = self.__translate_and_scale_to_fit_in_map(obs.p_boat)
+        obs.p_boat = self._translate_and_scale_to_fit_in_map(obs.p_boat)
 
         # scale vectors
-        obs.dt_p_boat = self.__scale_to_fit_in_img(obs.dt_p_boat)
-        obs.dt_theta_boat = self.__scale_to_fit_in_img(obs.dt_theta_boat)
-        obs.dt_rudder = self.__scale_to_fit_in_img(obs.dt_rudder)
-        obs.dt_sail = self.__scale_to_fit_in_img(obs.dt_sail)
-        obs.wind = self.__scale_to_fit_in_img(obs.wind)
+        obs.dt_p_boat = self._scale_to_fit_in_img(obs.dt_p_boat)
+        obs.dt_theta_boat = self._scale_to_fit_in_img(obs.dt_theta_boat)
+        obs.dt_rudder = self._scale_to_fit_in_img(obs.dt_rudder)
+        obs.dt_sail = self._scale_to_fit_in_img(obs.dt_sail)
+        obs.wind = self._scale_to_fit_in_img(obs.wind)
 
-    def __draw_borders(self, img: np.ndarray):
-        borders = self.__translate_and_scale_to_fit_in_map(
+    def _draw_borders(self, img: np.ndarray):
+        borders = self._translate_and_scale_to_fit_in_map(
             self.map_bounds).astype(int)
         cv2.rectangle(img,
                       tuple(borders[0]),
@@ -150,7 +150,7 @@ class CV2DRenderer(AbcRender):
                       self.style["border"]["width"],
                       lineType=cv2.LINE_AA)
 
-    def __draw_wind(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_wind(self, img: np.ndarray, obs: RendererObservation):
         img_center = np.array([self.size, self.size]) / 2
         cv2.arrowedLine(img,
                         tuple(img_center.astype(int)),
@@ -160,7 +160,7 @@ class CV2DRenderer(AbcRender):
                         tipLength=0.2,
                         line_type=cv2.LINE_AA)
 
-    def __draw_boat(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_boat(self, img: np.ndarray, obs: RendererObservation):
         boat_size = self.style["boat"]["size"]
         phi = self.style["boat"]["phi"]
         spike_coeff = self.style["boat"]["spike_coef"]
@@ -179,7 +179,7 @@ class CV2DRenderer(AbcRender):
                            self.style["boat"]["color"],
                            lineType=cv2.LINE_AA)
 
-    def __draw_sail(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_sail(self, img: np.ndarray, obs: RendererObservation):
         sail_height = self.style["sail"]["height"]
         sail_start = obs.p_boat
         sail_end = sail_start + angle_to_vec(obs.theta_sail) * sail_height
@@ -190,7 +190,7 @@ class CV2DRenderer(AbcRender):
                  self.style["sail"]["width"],
                  lineType=cv2.LINE_AA)
 
-    def __draw_rudder(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_rudder(self, img: np.ndarray, obs: RendererObservation):
         rudder_height = self.style["rudder"]["height"]
         boat_phi = self.style["boat"]["phi"]
         boat_size = self.style["boat"]["size"]
@@ -207,7 +207,7 @@ class CV2DRenderer(AbcRender):
                  self.style["rudder"]["width"],
                  lineType=cv2.LINE_AA)
 
-    def __draw_boat_pos_velocity(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_boat_pos_velocity(self, img: np.ndarray, obs: RendererObservation):
         obs.dt_p_boat
         dt_p_boat_start = obs.p_boat
         dt_p_boat_end = dt_p_boat_start + obs.dt_p_boat * self.vector_scale
@@ -219,7 +219,7 @@ class CV2DRenderer(AbcRender):
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
-    def __draw_boat_heading_velocity(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_boat_heading_velocity(self, img: np.ndarray, obs: RendererObservation):
         spike_coeff = self.style["boat"]["spike_coef"]
         boat_size = self.style["boat"]["size"]
         front_of_boat = obs.p_boat + \
@@ -235,7 +235,7 @@ class CV2DRenderer(AbcRender):
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
-    def __draw_rudder_velocity(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_rudder_velocity(self, img: np.ndarray, obs: RendererObservation):
         boat_phi = self.style["boat"]["phi"]
         boat_size = self.style["boat"]["size"]
         rudder_height = self.style["rudder"]["height"]
@@ -253,7 +253,7 @@ class CV2DRenderer(AbcRender):
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
-    def __draw_sail_velocity(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_sail_velocity(self, img: np.ndarray, obs: RendererObservation):
         sail_height = self.style["sail"]["height"]
         dt_sail_start = obs.p_boat + \
             angle_to_vec(obs.theta_sail) * sail_height
@@ -266,7 +266,7 @@ class CV2DRenderer(AbcRender):
                         tipLength=.2,
                         line_type=cv2.LINE_AA)
 
-    def __draw_boat_center(self, img: np.ndarray, obs: RendererObservation):
+    def _draw_boat_center(self, img: np.ndarray, obs: RendererObservation):
         cv2.circle(img,
                    tuple(obs.p_boat.astype(int)),
                    self.style["boat"]["center"]["radius"],
@@ -287,27 +287,27 @@ class CV2DRenderer(AbcRender):
         assert (self.map_bounds is not None
                 and self.center is not None), "Please call setup() first."
 
-        img = self.__create_empty_img()
+        img = self._create_empty_img()
 
         # prepare observation
         obs = RendererObservation(observation)
-        self.__transform_obs_to_fit_in_img(obs)
+        self._transform_obs_to_fit_in_img(obs)
 
         # draw extra stuff
         if draw_extra_fct is not None:
             draw_extra_fct(img, observation)
 
         # draw map
-        self.__draw_borders(img)
-        self.__draw_wind(img, obs)
-        self.__draw_boat(img, obs)
-        self.__draw_boat_heading_velocity(img, obs)
-        self.__draw_boat_pos_velocity(img, obs)
-        self.__draw_rudder(img, obs)
-        self.__draw_rudder_velocity(img, obs)
-        self.__draw_sail(img, obs)
-        self.__draw_sail_velocity(img, obs)
-        self.__draw_boat_center(img, obs)
+        self._draw_borders(img)
+        self._draw_wind(img, obs)
+        self._draw_boat(img, obs)
+        self._draw_boat_heading_velocity(img, obs)
+        self._draw_boat_pos_velocity(img, obs)
+        self._draw_rudder(img, obs)
+        self._draw_rudder_velocity(img, obs)
+        self._draw_sail(img, obs)
+        self._draw_sail_velocity(img, obs)
+        self._draw_boat_center(img, obs)
 
         # flip vertically
         img = img[::-1, :, :]
