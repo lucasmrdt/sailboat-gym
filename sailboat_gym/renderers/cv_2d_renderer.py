@@ -32,7 +32,7 @@ def rotate_vector(vector: np.ndarray, angle: float):
 
 
 class RendererObservation(metaclass=ProfilingMeta):
-    def _init_(self, obs: Observation):
+    def __init__(self, obs: Observation):
         # heading angle
         self.theta_boat = obs["theta_boat"][2]
         self.dt_theta_boat = np.abs(obs["dt_theta_boat"][2]) * \
