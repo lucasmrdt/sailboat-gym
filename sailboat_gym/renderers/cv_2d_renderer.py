@@ -12,6 +12,7 @@ WHITE = (255, 255, 255)
 RED = (200, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 120, 0)
+CYAN = (0, 255, 255)
 
 
 def rgba(color, alpha, background=np.array([255, 255, 255])):
@@ -59,6 +60,9 @@ class RendererObservation(metaclass=ProfilingMeta):
 
         # wind
         self.wind = obs["wind"]
+
+        # water
+        self.water = obs["water"]
 
 
 class CV2DRenderer(AbcRender):
@@ -112,7 +116,11 @@ class CV2DRenderer(AbcRender):
                 },
             },
             "wind": {
-                "color": rgba(BLUE, .2),
+                "color": rgba(BLUE, .5),
+                "width": 2,
+            },
+            "water": {
+                "color": rgba(CYAN, .5),
                 "width": 2,
             },
         }
@@ -139,6 +147,7 @@ class CV2DRenderer(AbcRender):
         obs.dt_rudder = self._scale_to_fit_in_img(obs.dt_rudder)
         obs.dt_sail = self._scale_to_fit_in_img(obs.dt_sail)
         obs.wind = self._scale_to_fit_in_img(obs.wind)
+        obs.water = self._scale_to_fit_in_img(obs.water)
 
     def _draw_borders(self, img: np.ndarray):
         borders = self._translate_and_scale_to_fit_in_map(
@@ -154,9 +163,21 @@ class CV2DRenderer(AbcRender):
         img_center = np.array([self.size, self.size]) / 2
         cv2.arrowedLine(img,
                         tuple(img_center.astype(int)),
-                        tuple((img_center + obs.wind*self.vector_scale).astype(int)),
+                        tuple((img_center + obs.wind *
+                              self.vector_scale).astype(int)),
                         self.style["wind"]["color"],
                         self.style["wind"]["width"],
+                        tipLength=0.2,
+                        line_type=cv2.LINE_AA)
+
+    def _draw_water(self, img: np.ndarray, obs: RendererObservation):
+        img_center = np.array([self.size, self.size]) / 2
+        cv2.arrowedLine(img,
+                        tuple(img_center.astype(int)),
+                        tuple((img_center + obs.water *
+                              self.vector_scale).astype(int)),
+                        self.style["water"]["color"],
+                        self.style["water"]["width"],
                         tipLength=0.2,
                         line_type=cv2.LINE_AA)
 
@@ -172,7 +193,7 @@ class CV2DRenderer(AbcRender):
                                        (np.pi + phi)) * boat_size],
             [obs.p_boat + angle_to_vec(obs.theta_boat - phi) * boat_size],
             [obs.p_boat + angle_to_vec(obs.theta_boat)
-             * spike_coeff*boat_size]
+             * spike_coeff * boat_size]
         ], dtype=int)
         cv2.fillConvexPoly(img,
                            sailboat_pts,
@@ -300,6 +321,7 @@ class CV2DRenderer(AbcRender):
         # draw map
         self._draw_borders(img)
         self._draw_wind(img, obs)
+        self._draw_water(img, obs)
         self._draw_boat(img, obs)
         self._draw_boat_heading_velocity(img, obs)
         self._draw_boat_pos_velocity(img, obs)

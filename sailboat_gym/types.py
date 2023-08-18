@@ -13,6 +13,7 @@ class Observation(TypedDict):
     theta_sail: np.ndarray[1]
     dt_theta_sail: np.ndarray[1]
     wind: np.ndarray[2]
+    water: np.ndarray[2]
 
 
 class Action(TypedDict):
@@ -34,6 +35,7 @@ GymObservation = spaces.Dict({
     "theta_sail": spaces.Box(low=-np.pi, high=np.pi, shape=(1,), dtype=np.float32),
     "dt_theta_sail": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
     "wind": spaces.Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float32),
+    "water": spaces.Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float32)
 })
 
 GymAction = spaces.Dict({

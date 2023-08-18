@@ -83,13 +83,14 @@ class LSASim(metaclass=ProfilingMeta):
 
         self.__init_simulation()
 
-    def reset(self, wind: np.ndarray[2], sim_rate: int):
+    def reset(self, wind: np.ndarray[2], water: np.ndarray[2], sim_rate: int):
         if is_debugging():
             print(
-                f'[LSASim] Resetting simulation with wind {wind} and sim_rate {sim_rate}')
+                f'[LSASim] Resetting simulation with wind {wind}, water {water} and sim_rate {sim_rate}')
         self.__send_msg({
             'reset': {
                 'wind': {'x': wind[0], 'y': wind[1]},
+                'water': {'x': water[0], 'y': water[1]},
                 'freq': sim_rate,
             }
         })
@@ -98,13 +99,15 @@ class LSASim(metaclass=ProfilingMeta):
         info = self.__parse_sim_reset_info(msg['info'])
         return obs, info
 
-    def step(self, action: Action):
+    def step(self, wind: np.ndarray[2], water: np.ndarray[2], action: Action):
         if is_debugging():
             print(f'[LSASim] Sending action {action}')
         self.__send_msg({
             'action': {
                 'theta_rudder': action['theta_rudder'].item(),
                 'theta_sail': action['theta_sail'].item(),
+                'wind': {'x': wind[0], 'y': wind[1]},
+                'water': {'x': water[0], 'y': water[1]},
             }
         })
         msg = self.__recv_msg()
@@ -160,6 +163,7 @@ class LSASim(metaclass=ProfilingMeta):
             'theta_sail': np.array([obs['theta_sail']], dtype=np.float32),
             'dt_theta_sail': np.array([obs['dt_theta_sail']], dtype=np.float32),
             'wind': np.array([obs['wind']['x'], obs['wind']['y']], dtype=np.float32),
+            'water': np.array([obs['water']['x'], obs['water']['y']], dtype=np.float32),
         }
 
     def __parse_sim_reset_info(self, info: SimResetInfo) -> ResetInfo:
