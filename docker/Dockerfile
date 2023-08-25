@@ -28,7 +28,7 @@ RUN git config --global http.postBuffer 1048576000
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/lucasmrdt/usv_sim_lsa \
     && cd usv_sim_lsa \
-    && git checkout c92d0015 \
+    && git checkout f2a49b3f \
     && git submodule init \
     && git submodule update
 
@@ -64,11 +64,11 @@ RUN chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys
 RUN apt-get install openssh-server -y
 
 ARG max_step_size=0.001
-ARG real_time_update_rate=0
+ARG physics_type=ode
 
 RUN cd ~/catkin_ws/install_isolated/share/usv_sim \
     && sed -i "s/MAX_STEP_SIZE/${max_step_size}/g" world/empty.world \
-    && sed -i "s/REAL_TIME_UPDATE_RATE/${real_time_update_rate}/g" world/empty.world \
+    && sed -i "s/PHYSICS_TYPE/${physics_type}/g" world/empty.world \
     && cp config/sailboat.${max_step_size}.yaml config/sailboat.yaml
 
 WORKDIR /root/catkin_ws/

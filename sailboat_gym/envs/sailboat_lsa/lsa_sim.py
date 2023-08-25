@@ -65,7 +65,7 @@ class SimResetInfo(TypedDict):
 class LSASim(metaclass=ProfilingMeta):
     DEFAULT_PORT = 5555  # set in Dockerfile
 
-    def __init__(self, container_tag='mss1', name='default') -> None:
+    def __init__(self, container_tag='mss1-ode', name='default') -> None:
         self.container_tag = container_tag
         self.name = name
 
@@ -130,24 +130,23 @@ class LSASim(metaclass=ProfilingMeta):
             self.is_running = False
             try:
                 self.container.pause()
-            except Exception as e:
+            except docker.errors.APIError as e:
                 if is_debugging():
                     raise e
-                self.is_running = True
 
     def __resume_if_needed(self):
         if not self.is_running:
+            self.is_running = True
             try:
                 self.container.unpause()
-                self.is_running = True
-            except Exception as e:
+            except docker.errors.APIError as e:
                 if is_debugging():
                     raise e
 
     def __init_simulation(self):
         if is_debugging():
             print('[LSASim] Launching docker container')
-        self.container, self.port, self.is_running = self.__launch_or_get_container(self.container_tag, self.name)  # noqa
+        self.container, self.port = self.__launch_or_get_container(self.container_tag, self.name)  # noqa
         self.__wait_until_ready()
         self.socket = self.__create_connection()
         self.__pause_if_needed()
@@ -180,6 +179,7 @@ class LSASim(metaclass=ProfilingMeta):
 
     def __get_available_port(self):
         def get_random_port():
+            np.random.seed()
             # https://stackoverflow.com/a/46023565
             return np.random.randint(49152, 65535)
 
@@ -212,13 +212,12 @@ class LSASim(metaclass=ProfilingMeta):
             except docker.errors.NotFound:
                 container = None
             if container:
-                is_running = container.status == 'running'
                 port = container.attrs['NetworkSettings']['Ports'][
                     f'{self.DEFAULT_PORT}/tcp'][0]['HostPort']
                 if is_debugging():
                     print(
                         f'\n[LSASim] Found existing docker container {name} running on port {port}')
-                return container, port, is_running
+                return container, port
 
             # find an available port
             port = self.__get_available_port()
@@ -259,8 +258,7 @@ class LSASim(metaclass=ProfilingMeta):
             if is_debugging():
                 print('\n[LSASim] Launched new docker container')
 
-        is_running = True
-        return container, port, is_running
+        return container, port
 
     def __wait_until_ready(self):
         with DurationProgress(total=17, desc='Waiting for docker container to be ready'):
