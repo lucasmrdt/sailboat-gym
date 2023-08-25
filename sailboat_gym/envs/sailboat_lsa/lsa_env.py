@@ -1,7 +1,5 @@
 import numpy as np
-import multiexit
-import signal
-from typing import Callable
+from typing import Callable, Union
 
 from ...abstracts import AbcRender
 from ...types import Observation, Action
@@ -13,7 +11,7 @@ from .lsa_sim import LSASim
 class SailboatLSAEnv(SailboatEnv):
     NB_STEPS_PER_SECONDS = 10  # Hz
 
-    def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: AbcRender = None, wind_generator_fn: Callable[[int], np.ndarray] = None, water_generator_fn: Callable[[int], np.ndarray] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1-ode', name='default', map_scale=1, stop_condition_fn: Callable[[Observation, Action, Observation], bool] = lambda *_: False):
+    def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: Union[AbcRender, None] = None, wind_generator_fn: Union[Callable[[int], np.ndarray], None] = None, water_generator_fn: Union[Callable[[int], np.ndarray], None] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1-ode', name='default', map_scale=1, stop_condition_fn: Callable[[Observation, Action, Observation], bool] = lambda *_: False):
         """Sailboat LSA environment
 
         Args:
@@ -36,14 +34,15 @@ class SailboatLSAEnv(SailboatEnv):
             'render_fps': float(video_speed * self.NB_STEPS_PER_SECONDS),
         }
 
-        def direction_generator(std=1):
+        def direction_generator(std=1.):
             direction = np.random.normal(0, std, 2)
 
             def generate_direction(step_idx):
                 return direction
             return generate_direction
 
-        self.sim = LSASim(container_tag, name)
+        self.name = name
+        self.container_tag = container_tag
         self.reward_fn = reward_fn
         self.stop_condition_fn = stop_condition_fn
         self.renderer = renderer
@@ -55,11 +54,7 @@ class SailboatLSAEnv(SailboatEnv):
         self.map_scale = map_scale
         self.keep_sim_alive = keep_sim_alive
         self.step_idx = 0
-
-        # Stop the simulation when the program exits
-        if not keep_sim_alive:
-            multiexit.install()
-            multiexit.register(self.sim.stop, shared=True)
+        self.sim = LSASim(self.container_tag, self.name)
 
     def reset(self, seed=None, **kwargs):
         super().reset(seed=seed, **kwargs)
@@ -86,6 +81,8 @@ class SailboatLSAEnv(SailboatEnv):
         return self.obs, info
 
     def step(self, action: Action):
+        assert self.obs is not None, 'Please call reset before step'
+
         self.step_idx += 1
 
         wind = self.wind_generator_fn(self.step_idx)
@@ -110,6 +107,7 @@ class SailboatLSAEnv(SailboatEnv):
 
     def render(self):
         assert self.renderer, 'No renderer'
+        assert self.obs is not None, 'Please call reset before render'
         return self.renderer.render(self.obs)
 
     def close(self):

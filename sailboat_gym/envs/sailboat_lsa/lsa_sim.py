@@ -4,6 +4,7 @@ import msgpack
 import time
 import threading
 import numpy as np
+import re
 from typing import TypedDict
 
 from ...utils import ProfilingMeta, is_debugging, DurationProgress
@@ -67,7 +68,7 @@ class LSASim(metaclass=ProfilingMeta):
 
     def __init__(self, container_tag='mss1-ode', name='default') -> None:
         self.container_tag = container_tag
-        self.name = name
+        self.name = re.sub(r'[^a-zA-Z0-9]', '-', name)
 
         self.wind = None
         self.sim_rate = None
@@ -145,7 +146,7 @@ class LSASim(metaclass=ProfilingMeta):
 
     def __init_simulation(self):
         if is_debugging():
-            print('[LSASim] Launching docker container')
+            print(f'[LSASim] Launching docker container for {self.name}')
         self.container, self.port = self.__launch_or_get_container(self.container_tag, self.name)  # noqa
         self.__wait_until_ready()
         self.socket = self.__create_connection()
@@ -226,13 +227,13 @@ class LSASim(metaclass=ProfilingMeta):
             try:
                 container = client.containers.run(
                     f'lucasmrdt/sailboat-sim-lsa-gym:{container_tag}',
-                    detach=True,
                     name=name,
+                    detach=True,
+                    auto_remove=True,
                     ports={
                         f'{self.DEFAULT_PORT}/tcp': port,
                         '22/tcp': None,
                     },
-                    remove=True,
                 )
             except docker.errors.NotFound as e:
                 raise RuntimeError(
@@ -254,9 +255,6 @@ class LSASim(metaclass=ProfilingMeta):
                     f'Image not found: {str(e)}. '
                     'Please check that the image exists on the Docker registry and try again.'
                 ) from e
-
-            if is_debugging():
-                print('\n[LSASim] Launched new docker container')
 
         return container, port
 
