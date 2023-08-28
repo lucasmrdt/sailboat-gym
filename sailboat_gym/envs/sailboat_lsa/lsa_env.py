@@ -58,7 +58,8 @@ class SailboatLSAEnv(SailboatEnv):
 
     def reset(self, seed=None, **kwargs):
         super().reset(seed=seed, **kwargs)
-        np.random.seed(seed)
+        if seed is not None:
+            np.random.seed(seed)
         self.step_idx = 0
 
         wind = self.wind_generator_fn(self.step_idx)

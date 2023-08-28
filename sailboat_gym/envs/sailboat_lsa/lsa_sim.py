@@ -5,9 +5,10 @@ import time
 import threading
 import numpy as np
 import re
+import os
 from typing import TypedDict
 
-from ...utils import ProfilingMeta, is_debugging, DurationProgress
+from ...utils import ProfilingMeta, is_debugging, is_debugging_all, DurationProgress
 from ...types import Action, Observation, ResetInfo
 
 
@@ -77,7 +78,6 @@ class LSASim(metaclass=ProfilingMeta):
         self.socket = None
 
         self.timer = None
-        self.is_running = False
 
         self.auto_pause_if_inactive = AutoPauseIfInactive(
             self.__pause_if_needed, self.__resume_if_needed)
@@ -124,25 +124,22 @@ class LSASim(metaclass=ProfilingMeta):
 
     def stop(self):
         with DurationProgress(total=5, desc='Stopping docker container'):
-            self.container.kill()
+            with self.auto_pause_if_inactive:
+                self.container.kill()
 
     def __pause_if_needed(self):
-        if self.is_running:
-            self.is_running = False
-            try:
-                self.container.pause()
-            except docker.errors.APIError as e:
-                if is_debugging():
-                    raise e
+        try:
+            self.container.pause()
+        except docker.errors.APIError as e:
+            if is_debugging_all():
+                raise e
 
     def __resume_if_needed(self):
-        if not self.is_running:
-            self.is_running = True
-            try:
-                self.container.unpause()
-            except docker.errors.APIError as e:
-                if is_debugging():
-                    raise e
+        try:
+            self.container.unpause()
+        except docker.errors.APIError as e:
+            if is_debugging_all():
+                raise e
 
     def __init_simulation(self):
         if is_debugging():
@@ -180,9 +177,9 @@ class LSASim(metaclass=ProfilingMeta):
 
     def __get_available_port(self):
         def get_random_port():
-            np.random.seed()
             # https://stackoverflow.com/a/46023565
-            return np.random.randint(49152, 65535)
+            random_int = int.from_bytes(os.urandom(2), byteorder='big')
+            return random_int % (65535 - 49152) + 49152
 
         port = get_random_port()
         while True:
