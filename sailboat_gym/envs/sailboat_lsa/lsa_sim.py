@@ -4,6 +4,7 @@ import msgpack
 import time
 import threading
 import numpy as np
+import sys
 import re
 import os
 from typing import TypedDict
@@ -66,9 +67,9 @@ class SimResetInfo(TypedDict):
 
 class LSASim(metaclass=ProfilingMeta):
     DEFAULT_PORT = 5555  # set in Dockerfile
+    DOCKER_IMAGE_NAME = 'lucasmrdt/sailboat-sim-lsa-gym:mss1-ode'
 
-    def __init__(self, container_tag='mss1-ode', name='default') -> None:
-        self.container_tag = container_tag
+    def __init__(self, name='default') -> None:
         self.name = re.sub(r'[^a-zA-Z0-9]', '-', name)
 
         self.wind = None
@@ -144,7 +145,8 @@ class LSASim(metaclass=ProfilingMeta):
     def __init_simulation(self):
         if is_debugging():
             print(f'[LSASim] Launching docker container for {self.name}')
-        self.container, self.port = self.__launch_or_get_container(self.container_tag, self.name)  # noqa
+        self.__pull_image_if_needed()
+        self.container, self.port = self.__launch_or_get_container(self.name)  # noqa
         self.__wait_until_ready()
         self.socket = self.__create_connection()
         self.__pause_if_needed()
@@ -192,7 +194,25 @@ class LSASim(metaclass=ProfilingMeta):
             except zmq.error.ZMQError:
                 port = get_random_port()
 
-    def __launch_or_get_container(self, container_tag, name):
+    def __pull_image_if_needed(self):
+        client = docker.from_env()
+
+        # Check if image is already pulled
+        images = [img.tags for img in client.images.list()]
+        if any(self.DOCKER_IMAGE_NAME in tags for tags in images):
+            return
+
+        for progress_dict in client.api.pull(self.DOCKER_IMAGE_NAME, stream=True, decode=True):
+            status = progress_dict.get('status')
+            progress = progress_dict.get('progress')
+
+            if progress:
+                sys.stdout.write(f'\r{status}: {progress}')
+                sys.stdout.flush()
+
+        print()
+
+    def __launch_or_get_container(self, name):
         with DurationProgress(total=7, desc='Launching docker container'):
             try:
                 client = docker.from_env()
@@ -202,7 +222,7 @@ class LSASim(metaclass=ProfilingMeta):
                 raise RuntimeError(
                     'Docker socket is not detected. Please start docker and try again or make sure that you have correctly installed docker (MacOS: refer to this instruction https://stackoverflow.com/a/76125150).') from e
 
-            name = f'sailboat-sim-lsa-gym-{container_tag}-{name}'
+            name = f'sailboat-sim-lsa-gym-{name}'
 
             # try to find an existing container with the given name
             try:
@@ -223,7 +243,7 @@ class LSASim(metaclass=ProfilingMeta):
             # launch a new container if none found or the existing container is not running
             try:
                 container = client.containers.run(
-                    f'lucasmrdt/sailboat-sim-lsa-gym:{container_tag}',
+                    self.DOCKER_IMAGE_NAME,
                     name=name,
                     detach=True,
                     auto_remove=True,
@@ -234,7 +254,7 @@ class LSASim(metaclass=ProfilingMeta):
                 )
             except docker.errors.NotFound as e:
                 raise RuntimeError(
-                    f'Could not find docker image lucasmrdt/sailboat-sim-lsa-gym:{container_tag}. '
+                    f'Could not find docker image {self.DOCKER_IMAGE_NAME}. '
                     'Please make sure the image exists and try again.'
                 ) from e
             except docker.errors.APIError as e:

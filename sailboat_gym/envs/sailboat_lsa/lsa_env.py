@@ -11,7 +11,7 @@ from .lsa_sim import LSASim
 class SailboatLSAEnv(SailboatEnv):
     NB_STEPS_PER_SECONDS = 10  # Hz
 
-    def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: Union[AbcRender, None] = None, wind_generator_fn: Union[Callable[[int], np.ndarray], None] = None, water_generator_fn: Union[Callable[[int], np.ndarray], None] = None, video_speed: float = 1, keep_sim_alive: bool = False, container_tag: str = 'mss1-ode', name='default', map_scale=1, stop_condition_fn: Callable[[Observation, Action, Observation], bool] = lambda *_: False):
+    def __init__(self, reward_fn: Callable[[Observation, Action, Observation], float] = lambda *_: 0, renderer: Union[AbcRender, None] = None, wind_generator_fn: Union[Callable[[int], np.ndarray], None] = None, water_generator_fn: Union[Callable[[int], np.ndarray], None] = None, video_speed: float = 1, keep_sim_alive: bool = False, name='default', map_scale=1, stop_condition_fn: Callable[[Observation, Action, Observation], bool] = lambda *_: False):
         """Sailboat LSA environment
 
         Args:
@@ -21,7 +21,6 @@ class SailboatLSAEnv(SailboatEnv):
             water_generator_fn (Callable[[int], np.ndarray], optional): Function that returns a 2D vector representing the global water current during the simulation. Defaults to None.
             video_speed (float, optional): Speed of the video recording. Defaults to 1.
             keep_sim_alive (bool, optional): Keep the simulation running even after the program exits. Defaults to False.
-            container_tag (str, optional): Docker tag to be used for the simulation, see the documentation for more information. Defaults to 'mss1-ode'.
             name ([type], optional): Name of the simulation, required to run multiples environment on same machine.. Defaults to 'default'.
             map_scale (int, optional): Scale of the map, used to scale the map in the renderer. Defaults to 1.
         """
@@ -42,7 +41,6 @@ class SailboatLSAEnv(SailboatEnv):
             return generate_direction
 
         self.name = name
-        self.container_tag = container_tag
         self.reward_fn = reward_fn
         self.stop_condition_fn = stop_condition_fn
         self.renderer = renderer
@@ -54,7 +52,7 @@ class SailboatLSAEnv(SailboatEnv):
         self.map_scale = map_scale
         self.keep_sim_alive = keep_sim_alive
         self.step_idx = 0
-        self.sim = LSASim(self.container_tag, self.name)
+        self.sim = LSASim(self.name)
 
     def reset(self, seed=None, **kwargs):
         super().reset(seed=seed, **kwargs)
